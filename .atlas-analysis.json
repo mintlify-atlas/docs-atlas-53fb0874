@@ -1,0 +1,87 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Turndown",
+  "projectDescription": "A JavaScript library that converts HTML to Markdown with support for CommonMark and custom rules",
+  "theme": "palm",
+  "primaryColor": "#2563eb",
+  "lightColor": "#3b82f6",
+  "darkColor": "#1e40af",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/conversion-options",
+              "concepts/rules",
+              "concepts/plugins",
+              "concepts/escaping"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/browser-usage",
+              "guides/node-usage",
+              "guides/custom-rules",
+              "guides/gfm-plugin",
+              "guides/migration"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "TurndownService",
+            "pages": [
+              "api/constructor",
+              "api/turndown",
+              "api/add-rule",
+              "api/keep",
+              "api/remove",
+              "api/use",
+              "api/escape"
+            ]
+          },
+          {
+            "group": "Rules",
+            "pages": [
+              "api/rule-structure",
+              "api/filters",
+              "api/replacements"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "HTML to Markdown conversion with CommonMark support",
+    "Configurable conversion options (heading styles, code blocks, delimiters)",
+    "Extensible rule system for custom HTML element handling",
+    "Plugin architecture for additional functionality",
+    "Browser and Node.js compatibility",
+    "Support for keeping or removing specific HTML elements"
+  ],
+  "publicApiSurface": [
+    "TurndownService(options)",
+    "turndown(input)",
+    "addRule(key, rule)",
+    "keep(filter)",
+    "remove(filter)",
+    "use(plugin)",
+    "escape(string)"
+  ]
+}
