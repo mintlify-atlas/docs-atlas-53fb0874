@@ -1,80 +1,337 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get started with Turndown in minutes
 ---
 
-## Get started in three steps
+# Quickstart
 
-Get your documentation site running locally and make your first customization.
+This guide will walk you through your first HTML to Markdown conversion using Turndown. In just a few minutes, you'll be converting HTML to clean, readable Markdown.
 
-### Step 1: Set up your local environment
+## Before You Begin
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+Make sure you have Turndown installed. If not, follow the [Installation](/installation) guide first.
+
+## Your First Conversion
+
+<Steps>
+  <Step title="Import Turndown">
+    First, import the TurndownService:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    <Tabs>
+      <Tab title="Node.js">
+        ```javascript
+        var TurndownService = require('turndown')
+        ```
+      </Tab>
+      <Tab title="ES Module">
+        ```javascript
+        import TurndownService from 'turndown'
+        ```
+      </Tab>
+      <Tab title="Browser">
+        ```html
+        <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+        <!-- TurndownService is now available globally -->
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Create a service instance">
+    Create a new instance of TurndownService:
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    ```javascript
+    var turndownService = new TurndownService()
+    ```
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    <Note>
+      You can call TurndownService with or without the `new` keyword - both work the same way.
+    </Note>
+  </Step>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+  <Step title="Convert HTML to Markdown">
+    Use the `turndown()` method to convert HTML:
+    
+    ```javascript
+    var html = '<h1>Hello world!</h1>'
+    var markdown = turndownService.turndown(html)
+    
+    console.log(markdown)
+    // Output: # Hello world!
+    ```
+    
+    Congratulations! You've just converted your first HTML to Markdown.
+  </Step>
+</Steps>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+## More Examples
 
-### Step 3: Go live
+### Converting Complex HTML
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+Turndown handles complex HTML structures with ease:
 
-## Next steps
+```javascript
+var TurndownService = require('turndown')
+var turndownService = new TurndownService()
 
-Now that you have your docs running, explore these key features:
+var html = `
+  <article>
+    <h1>Getting Started with Turndown</h1>
+    <p>Turndown is a <strong>powerful</strong> HTML to Markdown converter.</p>
+    <h2>Features</h2>
+    <ul>
+      <li>CommonMark support</li>
+      <li>Highly configurable</li>
+      <li>Plugin system</li>
+    </ul>
+    <blockquote>
+      <p>It just works!</p>
+    </blockquote>
+  </article>
+`
+
+var markdown = turndownService.turndown(html)
+console.log(markdown)
+```
+
+**Output:**
+
+```markdown
+Getting Started with Turndown
+==============================
+
+Turndown is a **powerful** HTML to Markdown converter.
+
+Features
+--------
+
+*   CommonMark support
+*   Highly configurable
+*   Plugin system
+
+> It just works!
+```
+
+### Converting DOM Elements
+
+In a browser environment, you can convert DOM elements directly:
+
+```javascript
+var turndownService = new TurndownService()
+
+// Convert a specific element
+var contentDiv = document.getElementById('content')
+var markdown = turndownService.turndown(contentDiv)
+
+// Convert the entire document
+var fullMarkdown = turndownService.turndown(document)
+
+// Convert a document fragment
+var fragment = document.createDocumentFragment()
+// ... add nodes to fragment
+var fragmentMarkdown = turndownService.turndown(fragment)
+```
+
+## Customizing the Conversion
+
+### Basic Configuration
+
+Customize how Turndown converts HTML by passing options to the constructor:
+
+```javascript
+var turndownService = new TurndownService({
+  headingStyle: 'atx',           // Use # for headings instead of underlines
+  codeBlockStyle: 'fenced',      // Use ``` for code blocks
+  bulletListMarker: '-',         // Use - for bullet lists
+  emDelimiter: '*',              // Use * for emphasis
+  strongDelimiter: '**'          // Use ** for strong
+})
+
+var html = '<h1>Title</h1><p><em>italic</em> and <strong>bold</strong></p>'
+var markdown = turndownService.turndown(html)
+
+console.log(markdown)
+// Output:
+// # Title
+//
+// *italic* and **bold**
+```
+
+### Common Options
+
+<Tabs>
+  <Tab title="Heading Styles">
+    ```javascript
+    // Setext style (default): uses underlines for h1 and h2
+    var service1 = new TurndownService({ headingStyle: 'setext' })
+    service1.turndown('<h1>Title</h1>')
+    // Title
+    // =====
+    
+    // ATX style: uses # for all headings
+    var service2 = new TurndownService({ headingStyle: 'atx' })
+    service2.turndown('<h1>Title</h1>')
+    // # Title
+    ```
+  </Tab>
+  
+  <Tab title="Code Block Styles">
+    ```javascript
+    // Indented code blocks (default)
+    var service1 = new TurndownService({ codeBlockStyle: 'indented' })
+    service1.turndown('<pre><code>var x = 1;</code></pre>')
+    //     var x = 1;
+    
+    // Fenced code blocks
+    var service2 = new TurndownService({ codeBlockStyle: 'fenced' })
+    service2.turndown('<pre><code>var x = 1;</code></pre>')
+    // ```
+    // var x = 1;
+    // ```
+    ```
+  </Tab>
+  
+  <Tab title="Link Styles">
+    ```javascript
+    // Inlined links (default)
+    var service1 = new TurndownService({ linkStyle: 'inlined' })
+    service1.turndown('<a href="/page">Link</a>')
+    // [Link](/page)
+    
+    // Referenced links
+    var service2 = new TurndownService({ linkStyle: 'referenced' })
+    service2.turndown('<a href="/page">Link</a>')
+    // [Link][1]
+    //
+    // [1]: /page
+    ```
+  </Tab>
+</Tabs>
+
+For a complete list of options, see [Conversion Options](/concepts/conversion-options).
+
+## Working with Code
+
+### Inline Code
+
+```javascript
+var html = '<p>Use the <code>turndown()</code> method to convert HTML.</p>'
+var markdown = turndownService.turndown(html)
+
+console.log(markdown)
+// Output: Use the `turndown()` method to convert HTML.
+```
+
+### Code Blocks with Language
+
+```javascript
+var html = `
+  <pre><code class="language-javascript">
+function hello() {
+  console.log('Hello world!');
+}
+  </code></pre>
+`
+
+var turndownService = new TurndownService({ codeBlockStyle: 'fenced' })
+var markdown = turndownService.turndown(html)
+
+console.log(markdown)
+```
+
+**Output:**
+
+```markdown
+\`\`\`javascript
+function hello() {
+  console.log('Hello world!');
+}
+\`\`\`
+```
+
+## Error Handling
+
+Turndown throws a `TypeError` if you pass invalid input:
+
+```javascript
+var turndownService = new TurndownService()
+
+try {
+  var markdown = turndownService.turndown(null)
+} catch (error) {
+  console.error(error.message)
+  // Output: null is not a string, or an element/document/fragment node.
+}
+```
+
+Valid input types:
+- Strings containing HTML
+- Element nodes (`nodeType === 1`)
+- Document nodes (`nodeType === 9`)
+- Document fragment nodes (`nodeType === 11`)
+
+## Complete Example
+
+Here's a complete working example bringing it all together:
+
+```javascript
+var TurndownService = require('turndown')
+
+// Create service with custom options
+var turndownService = new TurndownService({
+  headingStyle: 'atx',
+  codeBlockStyle: 'fenced',
+  bulletListMarker: '-'
+})
+
+// HTML content to convert
+var html = `
+  <article>
+    <h1>My Blog Post</h1>
+    <p>This is a paragraph with <strong>bold</strong> and <em>italic</em> text.</p>
+    
+    <h2>Code Example</h2>
+    <pre><code class="language-javascript">
+const greeting = 'Hello, world!';
+console.log(greeting);
+    </code></pre>
+    
+    <h2>Features</h2>
+    <ul>
+      <li>Easy to use</li>
+      <li>Highly configurable</li>
+      <li>Great output</li>
+    </ul>
+    
+    <p>Read more at <a href="https://example.com">our website</a>.</p>
+  </article>
+`
+
+// Convert to Markdown
+var markdown = turndownService.turndown(html)
+
+console.log(markdown)
+```
+
+## Next Steps
+
+Now that you've completed the quickstart, explore these topics to get the most out of Turndown:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Conversion Options" icon="sliders" href="/concepts/conversion-options">
+    Learn about all available configuration options
+  </Card>
+  <Card title="Custom Rules" icon="wrench" href="/guides/custom-rules">
+    Create custom rules to handle specific HTML elements
+  </Card>
+  <Card title="Plugins" icon="plug" href="/concepts/plugins">
+    Extend Turndown with plugins like GFM support
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/constructor">
+    Explore the complete API documentation
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+<Tip>
+  **Pro Tip**: Start with the default options and customize as needed. Turndown's defaults follow CommonMark conventions and work well for most use cases.
+</Tip>

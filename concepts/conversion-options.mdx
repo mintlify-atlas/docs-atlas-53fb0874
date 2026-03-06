@@ -1,0 +1,296 @@
+---
+title: 'Conversion Options'
+description: 'Configure how Turndown converts HTML to Markdown'
+---
+
+Turndown provides extensive options to customize the conversion output. Options are passed to the constructor when creating a new TurndownService instance.
+
+## Usage
+
+```javascript
+var turndownService = new TurndownService({
+  headingStyle: 'atx',
+  codeBlockStyle: 'fenced',
+  bulletListMarker: '-'
+})
+```
+
+## Basic Options
+
+These options control the Markdown syntax style used for common elements.
+
+<ParamField path="headingStyle" type="string" default="setext">
+  The style to use for headings.
+  
+  **Valid values:**
+  - `setext` - Uses underlines for h1 and h2 (h1 uses `=`, h2 uses `-`)
+  - `atx` - Uses `#` symbols for all heading levels
+  
+  ```javascript
+  // setext style (default)
+  Heading 1
+  =========
+  
+  Heading 2
+  ---------
+  
+  // atx style
+  # Heading 1
+  ## Heading 2
+  ```
+</ParamField>
+
+<ParamField path="hr" type="string" default="* * *">
+  The string to use for horizontal rules.
+  
+  Must be a valid [CommonMark thematic break](http://spec.commonmark.org/0.27/#thematic-breaks).
+  
+  **Examples:**
+  ```javascript
+  { hr: '---' }
+  { hr: '***' }
+  { hr: '* * *' }
+  ```
+</ParamField>
+
+<ParamField path="bulletListMarker" type="string" default="*">
+  The character to use for unordered list items.
+  
+  **Valid values:** `-`, `+`, or `*`
+  
+  ```javascript
+  // With bulletListMarker: '*'
+  * Item 1
+  * Item 2
+  
+  // With bulletListMarker: '-'
+  - Item 1
+  - Item 2
+  ```
+</ParamField>
+
+<ParamField path="codeBlockStyle" type="string" default="indented">
+  The style to use for code blocks.
+  
+  **Valid values:**
+  - `indented` - Uses 4-space indentation
+  - `fenced` - Uses code fences with backticks
+  
+  ```javascript
+  // indented style (default)
+      function hello() {
+        console.log('world')
+      }
+  
+  // fenced style
+  ```
+  function hello() {
+    console.log('world')
+  }
+  ```
+  ```
+</ParamField>
+
+<ParamField path="fence" type="string" default="```">
+  The fence character to use for fenced code blocks.
+  
+  Only used when `codeBlockStyle` is `fenced`.
+  
+  **Valid values:** ` ``` ` or `~~~`
+  
+  ```javascript
+  new TurndownService({ 
+    codeBlockStyle: 'fenced',
+    fence: '~~~' 
+  })
+  ```
+</ParamField>
+
+<ParamField path="emDelimiter" type="string" default="_">
+  The delimiter to use for emphasis (italic) text.
+  
+  **Valid values:** `_` or `*`
+  
+  ```javascript
+  // With emDelimiter: '_' (default)
+  _italic text_
+  
+  // With emDelimiter: '*'
+  *italic text*
+  ```
+</ParamField>
+
+<ParamField path="strongDelimiter" type="string" default="**">
+  The delimiter to use for strong (bold) text.
+  
+  **Valid values:** `**` or `__`
+  
+  ```javascript
+  // With strongDelimiter: '**' (default)
+  **bold text**
+  
+  // With strongDelimiter: '__'
+  __bold text__
+  ```
+</ParamField>
+
+<ParamField path="linkStyle" type="string" default="inlined">
+  The style to use for links.
+  
+  **Valid values:**
+  - `inlined` - Places URL directly in the link
+  - `referenced` - Uses reference-style links with definitions at the bottom
+  
+  ```javascript
+  // inlined style (default)
+  [Link text](https://example.com)
+  
+  // referenced style
+  [Link text][1]
+  
+  [1]: https://example.com
+  ```
+</ParamField>
+
+<ParamField path="linkReferenceStyle" type="string" default="full">
+  The style to use for reference links.
+  
+  Only used when `linkStyle` is `referenced`.
+  
+  **Valid values:**
+  - `full` - Uses numeric references
+  - `collapsed` - Uses empty square brackets
+  - `shortcut` - Uses link text as reference
+  
+  ```javascript
+  // full style (default)
+  [Link text][1]
+  [1]: https://example.com
+  
+  // collapsed style
+  [Link text][]
+  [Link text]: https://example.com
+  
+  // shortcut style
+  [Link text]
+  [Link text]: https://example.com
+  ```
+</ParamField>
+
+<ParamField path="br" type="string" default="  ">
+  The string to use for line breaks (`<br>` elements).
+  
+  Default is two spaces (CommonMark line break syntax).
+  
+  ```javascript
+  // With br: '  ' (default)
+  Line one  
+  Line two
+  
+  // With br: '\\'  
+  Line one\\
+  Line two
+  ```
+</ParamField>
+
+<ParamField path="preformattedCode" type="boolean" default="false">
+  Whether to preserve whitespace in code blocks.
+  
+  When `true`, prevents collapsing of whitespace in `<pre>` elements.
+  
+  See [collapse-whitespace issue #16](https://github.com/lucthev/collapse-whitespace/issues/16) for details.
+</ParamField>
+
+## Advanced Options
+
+These options provide fine-grained control over special conversion cases using custom replacement functions.
+
+<ParamField path="blankReplacement" type="function" default="See below">
+  A function that determines how blank elements should be converted.
+  
+  A blank element contains only whitespace and is not an `<a>`, `<td>`, `<th>`, or void element.
+  
+  **Function signature:** `function(content, node)`
+  
+  **Default implementation:**
+  ```javascript
+  function (content, node) {
+    return node.isBlock ? '\n\n' : ''
+  }
+  ```
+  
+  The default returns two newlines for block elements and an empty string for inline elements.
+</ParamField>
+
+<ParamField path="keepReplacement" type="function" default="See below">
+  A function that determines how elements marked with `keep()` should be rendered.
+  
+  Elements marked with `keep()` are rendered as HTML in the Markdown output.
+  
+  **Function signature:** `function(content, node)`
+  
+  **Default implementation:**
+  ```javascript
+  function (content, node) {
+    return node.isBlock ? '\n\n' + node.outerHTML + '\n\n' : node.outerHTML
+  }
+  ```
+  
+  The default surrounds block-level elements with blank lines.
+</ParamField>
+
+<ParamField path="defaultReplacement" type="function" default="See below">
+  A function that handles elements not matched by any rule.
+  
+  This is the fallback for unrecognized elements.
+  
+  **Function signature:** `function(content, node)`
+  
+  **Default implementation:**
+  ```javascript
+  function (content, node) {
+    return node.isBlock ? '\n\n' + content + '\n\n' : content
+  }
+  ```
+  
+  The default outputs the element's text content, surrounded by blank lines if it's a block element.
+</ParamField>
+
+## Complete Example
+
+Here's an example using multiple options:
+
+```javascript
+var turndownService = new TurndownService({
+  // Markdown style preferences
+  headingStyle: 'atx',
+  hr: '---',
+  bulletListMarker: '-',
+  codeBlockStyle: 'fenced',
+  fence: '```',
+  emDelimiter: '*',
+  strongDelimiter: '**',
+  linkStyle: 'inlined',
+  br: '\\',
+  
+  // Custom default replacement
+  defaultReplacement: function (content, node) {
+    // Add a comment for unrecognized elements
+    return node.isBlock 
+      ? '\n\n<!-- ' + node.nodeName + ' -->\n' + content + '\n\n'
+      : content
+  }
+})
+
+var html = '<article><h1>Title</h1><p>Content</p></article>'
+var markdown = turndownService.turndown(html)
+```
+
+<Note>
+  Options can only be set during instantiation. To use different options, create a new TurndownService instance.
+</Note>
+
+## Related
+
+- [Rules](/concepts/rules) - Learn how to extend conversion behavior with custom rules
+- [Escaping](/concepts/escaping) - Understand how Markdown characters are escaped

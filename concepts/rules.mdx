@@ -1,0 +1,360 @@
+---
+title: 'Rules'
+description: 'Extend Turndown with custom conversion rules'
+---
+
+Rules define how HTML elements are converted to Markdown. Turndown includes built-in CommonMark rules and allows you to add custom rules to handle additional elements or override default behavior.
+
+## What Are Rules?
+
+A rule is a JavaScript object with two properties:
+
+- **`filter`** - Selects which HTML elements the rule applies to
+- **`replacement`** - A function that converts the element to Markdown
+
+### Basic Rule Structure
+
+```javascript
+{
+  filter: 'p',
+  replacement: function (content) {
+    return '\n\n' + content + '\n\n'
+  }
+}
+```
+
+This rule selects `<p>` elements and wraps their content with blank lines.
+
+## Adding Custom Rules
+
+Use the `addRule()` method to add a custom rule:
+
+```javascript
+turndownService.addRule('strikethrough', {
+  filter: ['del', 's', 'strike'],
+  replacement: function (content) {
+    return '~' + content + '~'
+  }
+})
+```
+
+<ParamField path="key" type="string" required>
+  A unique identifier for the rule. Used for reference and debugging.
+</ParamField>
+
+<ParamField path="rule" type="object" required>
+  An object with `filter` and `replacement` properties.
+</ParamField>
+
+<Note>
+  `addRule()` returns the TurndownService instance, allowing you to chain multiple calls.
+</Note>
+
+## The Filter Property
+
+The filter determines which elements the rule applies to. It can be a string, array, or function.
+
+### String Filter
+
+Matches elements by tag name (case-insensitive):
+
+```javascript
+filter: 'p'  // Matches <p> elements
+```
+
+### Array Filter
+
+Matches any of the specified tag names:
+
+```javascript
+filter: ['em', 'i']  // Matches <em> or <i> elements
+```
+
+### Function Filter
+
+Provides complete control over element matching:
+
+```javascript
+filter: function (node, options) {
+  return (
+    options.linkStyle === 'inlined' &&
+    node.nodeName === 'A' &&
+    node.getAttribute('href')
+  )
+}
+```
+
+The function receives:
+- `node` - The DOM node being evaluated
+- `options` - The TurndownService options object
+
+Return `true` to apply the rule to the node.
+
+<Warning>
+  Tag names in the filter must be lowercase, even if the HTML uses uppercase tags.
+</Warning>
+
+## The Replacement Function
+
+The replacement function converts the matched element to Markdown.
+
+**Function signature:**
+```javascript
+function (content, node, options)
+```
+
+**Parameters:**
+- `content` - The Markdown content of the element's children
+- `node` - The DOM node being converted
+- `options` - The TurndownService options object
+
+**Returns:** A Markdown string
+
+### Replacement Examples
+
+Here are real examples from Turndown's built-in CommonMark rules:
+
+<Accordion title="Emphasis (Italic) - src/commonmark-rules.js:208">
+```javascript
+{
+  filter: ['em', 'i'],
+  
+  replacement: function (content, node, options) {
+    if (!content.trim()) return ''
+    return options.emDelimiter + content + options.emDelimiter
+  }
+}
+```
+
+Converts `<em>text</em>` to `_text_` (or `*text*` depending on options).
+</Accordion>
+
+<Accordion title="Strong (Bold) - src/commonmark-rules.js:217">
+```javascript
+{
+  filter: ['strong', 'b'],
+  
+  replacement: function (content, node, options) {
+    if (!content.trim()) return ''
+    return options.strongDelimiter + content + options.strongDelimiter
+  }
+}
+```
+
+Converts `<strong>text</strong>` to `**text**`.
+</Accordion>
+
+<Accordion title="Headings - src/commonmark-rules.js:21">
+```javascript
+{
+  filter: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+  
+  replacement: function (content, node, options) {
+    var hLevel = Number(node.nodeName.charAt(1))
+    
+    if (options.headingStyle === 'setext' && hLevel < 3) {
+      var underline = repeat((hLevel === 1 ? '=' : '-'), content.length)
+      return (
+        '\n\n' + content + '\n' + underline + '\n\n'
+      )
+    } else {
+      return '\n\n' + repeat('#', hLevel) + ' ' + content + '\n\n'
+    }
+  }
+}
+```
+
+Converts headings to either setext or atx style based on options.
+</Accordion>
+
+<Accordion title="Inline Links - src/commonmark-rules.js:143">
+```javascript
+{
+  filter: function (node, options) {
+    return (
+      options.linkStyle === 'inlined' &&
+      node.nodeName === 'A' &&
+      node.getAttribute('href')
+    )
+  },
+  
+  replacement: function (content, node) {
+    var href = node.getAttribute('href')
+    if (href) href = href.replace(/([()])/g, '\\$1')
+    var title = cleanAttribute(node.getAttribute('title'))
+    if (title) title = ' "' + title.replace(/"/g, '\\"') + '"'
+    return '[' + content + '](' + href + title + ')'
+  }
+}
+```
+
+Converts `<a href="url" title="title">text</a>` to `[text](url "title")`.
+</Accordion>
+
+<Accordion title="Blockquotes - src/commonmark-rules.js:38">
+```javascript
+{
+  filter: 'blockquote',
+  
+  replacement: function (content) {
+    content = trimNewlines(content).replace(/^/gm, '> ')
+    return '\n\n' + content + '\n\n'
+  }
+}
+```
+
+Prefixes each line with `> ` to create a blockquote.
+</Accordion>
+
+<Accordion title="Inline Code - src/commonmark-rules.js:226">
+```javascript
+{
+  filter: function (node) {
+    var hasSiblings = node.previousSibling || node.nextSibling
+    var isCodeBlock = node.parentNode.nodeName === 'PRE' && !hasSiblings
+    
+    return node.nodeName === 'CODE' && !isCodeBlock
+  },
+  
+  replacement: function (content) {
+    if (!content) return ''
+    content = content.replace(/\r?\n|\r/g, ' ')
+    
+    var extraSpace = /^`|^ .*?[^ ].* $|`$/.test(content) ? ' ' : ''
+    var delimiter = '`'
+    var matches = content.match(/`+/gm) || []
+    while (matches.indexOf(delimiter) !== -1) delimiter = delimiter + '`'
+    
+    return delimiter + extraSpace + content + extraSpace + delimiter
+  }
+}
+```
+
+Handles backtick escaping and edge cases for inline code.
+</Accordion>
+
+## Rule Precedence
+
+When converting an element, Turndown selects the first matching rule in this order:
+
+1. **Blank rule** - Elements containing only whitespace
+2. **Added rules** - Custom rules added with `addRule()`
+3. **CommonMark rules** - Built-in rules for standard Markdown elements
+4. **Keep rules** - Elements marked with `keep()`
+5. **Remove rules** - Elements marked with `remove()`
+6. **Default rule** - Fallback for unrecognized elements
+
+<Note>
+  Rules added with `addRule()` take precedence over CommonMark rules, allowing you to override default behavior.
+</Note>
+
+## Special Rules
+
+Turndown has several special built-in rules:
+
+### Blank Rule
+
+Handles elements that contain only whitespace (except `<a>`, `<td>`, `<th>`, and void elements).
+
+Customize with the `blankReplacement` option:
+
+```javascript
+var turndownService = new TurndownService({
+  blankReplacement: function (content, node) {
+    return node.isBlock ? '\n\n' : ''
+  }
+})
+```
+
+### Keep Rules
+
+Elements marked with `keep()` are rendered as HTML in the Markdown output:
+
+```javascript
+turndownService.keep(['del', 'ins'])
+turndownService.turndown('<p>Hello <del>world</del><ins>World</ins></p>')
+// Result: 'Hello <del>world</del><ins>World</ins>'
+```
+
+Customize with the `keepReplacement` option:
+
+```javascript
+var turndownService = new TurndownService({
+  keepReplacement: function (content, node) {
+    return node.isBlock ? '\n\n' + node.outerHTML + '\n\n' : node.outerHTML
+  }
+})
+```
+
+### Remove Rules
+
+Elements marked with `remove()` are completely removed from output:
+
+```javascript
+turndownService.remove('del')
+turndownService.turndown('<p>Hello <del>world</del><ins>World</ins></p>')
+// Result: 'Hello World'
+```
+
+### Default Rule
+
+Handles elements not matched by any other rule. Outputs the element's text content.
+
+Customize with the `defaultReplacement` option:
+
+```javascript
+var turndownService = new TurndownService({
+  defaultReplacement: function (content, node) {
+    return node.isBlock ? '\n\n' + content + '\n\n' : content
+  }
+})
+```
+
+## Advanced Examples
+
+### Handling Custom HTML Elements
+
+```javascript
+turndownService.addRule('customAlert', {
+  filter: function (node) {
+    return node.nodeName === 'DIV' && 
+           node.classList.contains('alert')
+  },
+  replacement: function (content, node) {
+    var type = node.getAttribute('data-type') || 'info'
+    return '\n\n> [!' + type.toUpperCase() + ']\n> ' + 
+           content.replace(/\n/g, '\n> ') + '\n\n'
+  }
+})
+```
+
+### Preserving Data Attributes
+
+```javascript
+turndownService.addRule('abbr', {
+  filter: 'abbr',
+  replacement: function (content, node) {
+    var title = node.getAttribute('title')
+    return title ? content + ' (' + title + ')' : content
+  }
+})
+```
+
+### Conditional Conversion
+
+```javascript
+turndownService.addRule('spoiler', {
+  filter: function (node) {
+    return node.classList && node.classList.contains('spoiler')
+  },
+  replacement: function (content) {
+    return '||' + content + '||'
+  }
+})
+```
+
+## Related
+
+- [Conversion Options](/concepts/conversion-options) - Configure global conversion behavior
+- [Plugins](/concepts/plugins) - Package multiple rules as reusable plugins
+- [API Reference](/api/add-rule) - Detailed addRule() documentation

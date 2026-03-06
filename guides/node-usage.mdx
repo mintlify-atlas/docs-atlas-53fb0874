@@ -1,0 +1,273 @@
+---
+title: Node.js Usage
+description: Learn how to use Turndown in Node.js environments for server-side HTML to Markdown conversion
+---
+
+## Installation
+
+Install Turndown from npm:
+
+```bash
+npm install turndown
+```
+
+## Basic Usage
+
+Require Turndown and create an instance:
+
+```javascript
+var TurndownService = require('turndown')
+
+var turndownService = new TurndownService()
+var markdown = turndownService.turndown('<h1>Hello world!</h1>')
+
+console.log(markdown) // # Hello world!
+```
+
+## CommonJS vs ES Modules
+
+Turndown provides different module formats to suit your project:
+
+<Tabs>
+  <Tab title="CommonJS">
+    ```javascript
+    // Default CommonJS entry point
+    var TurndownService = require('turndown')
+    
+    var turndownService = new TurndownService()
+    var markdown = turndownService.turndown('<p>Hello world</p>')
+    ```
+    
+    The main entry point is `lib/turndown.cjs.js`.
+  </Tab>
+  
+  <Tab title="ES Modules">
+    ```javascript
+    // ES module import
+    import TurndownService from 'turndown'
+    
+    const turndownService = new TurndownService()
+    const markdown = turndownService.turndown('<p>Hello world</p>')
+    ```
+    
+    The ES module entry point is `lib/turndown.es.js`, specified via the `module` field in package.json.
+  </Tab>
+</Tabs>
+
+## Server-Side HTML Parsing with Domino
+
+Turndown includes `@mixmark-io/domino` as a dependency for server-side DOM manipulation. This allows you to parse HTML strings and work with DOM nodes in Node.js:
+
+```javascript
+var TurndownService = require('turndown')
+
+var turndownService = new TurndownService()
+
+// Parse HTML string
+var html = `
+  <article>
+    <h1>Article Title</h1>
+    <p>This is the <strong>article content</strong>.</p>
+    <ul>
+      <li>Point one</li>
+      <li>Point two</li>
+    </ul>
+  </article>
+`
+
+var markdown = turndownService.turndown(html)
+console.log(markdown)
+```
+
+Output:
+```markdown
+Article Title
+=============
+
+This is the **article content**.
+
+*   Point one
+*   Point two
+```
+
+<Note>
+The domino dependency is automatically excluded in browser builds via the `browser` field in package.json.
+</Note>
+
+## Integration Patterns
+
+### Express.js Middleware
+
+Create a middleware to convert HTML responses to Markdown:
+
+```javascript
+const express = require('express')
+const TurndownService = require('turndown')
+
+const app = express()
+const turndownService = new TurndownService()
+
+app.get('/api/markdown', (req, res) => {
+  const html = req.query.html
+  
+  if (!html) {
+    return res.status(400).json({ error: 'HTML parameter required' })
+  }
+  
+  try {
+    const markdown = turndownService.turndown(html)
+    res.json({ markdown })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+app.listen(3000)
+```
+
+### Processing Files
+
+Convert HTML files to Markdown:
+
+```javascript
+const fs = require('fs')
+const TurndownService = require('turndown')
+
+const turndownService = new TurndownService({
+  headingStyle: 'atx',
+  codeBlockStyle: 'fenced'
+})
+
+// Read HTML file
+const html = fs.readFileSync('input.html', 'utf8')
+
+// Convert to Markdown
+const markdown = turndownService.turndown(html)
+
+// Write Markdown file
+fs.writeFileSync('output.md', markdown)
+
+console.log('Conversion complete!')
+```
+
+### Batch Processing
+
+Process multiple HTML files:
+
+```javascript
+const fs = require('fs').promises
+const path = require('path')
+const TurndownService = require('turndown')
+
+const turndownService = new TurndownService()
+
+async function convertDirectory(inputDir, outputDir) {
+  const files = await fs.readdir(inputDir)
+  
+  for (const file of files) {
+    if (path.extname(file) === '.html') {
+      const inputPath = path.join(inputDir, file)
+      const outputPath = path.join(outputDir, file.replace('.html', '.md'))
+      
+      const html = await fs.readFile(inputPath, 'utf8')
+      const markdown = turndownService.turndown(html)
+      
+      await fs.writeFile(outputPath, markdown)
+      console.log(`Converted: ${file}`)
+    }
+  }
+}
+
+convertDirectory('./html', './markdown')
+  .then(() => console.log('All files converted'))
+  .catch(error => console.error('Error:', error))
+```
+
+### Streaming Large Files
+
+For very large HTML files, you might want to process them in chunks:
+
+```javascript
+const fs = require('fs')
+const TurndownService = require('turndown')
+
+const turndownService = new TurndownService()
+
+function convertLargeFile(inputPath, outputPath) {
+  return new Promise((resolve, reject) => {
+    let html = ''
+    
+    const readStream = fs.createReadStream(inputPath, { encoding: 'utf8' })
+    
+    readStream.on('data', chunk => {
+      html += chunk
+    })
+    
+    readStream.on('end', () => {
+      try {
+        const markdown = turndownService.turndown(html)
+        fs.writeFileSync(outputPath, markdown)
+        resolve()
+      } catch (error) {
+        reject(error)
+      }
+    })
+    
+    readStream.on('error', reject)
+  })
+}
+
+convertLargeFile('large-input.html', 'output.md')
+  .then(() => console.log('Large file converted'))
+  .catch(error => console.error('Error:', error))
+```
+
+## Configuration Options
+
+Customize Turndown behavior when instantiating:
+
+```javascript
+var turndownService = new TurndownService({
+  headingStyle: 'atx',           // Use ### style headings
+  hr: '---',                      // Horizontal rule style
+  bulletListMarker: '-',          // Use - for bullet lists
+  codeBlockStyle: 'fenced',       // Use ``` for code blocks
+  fence: '```',                   // Fence style
+  emDelimiter: '*',               // Use * for emphasis
+  strongDelimiter: '**',          // Use ** for strong
+  linkStyle: 'inlined',           // Inline links
+  linkReferenceStyle: 'full',     // Reference link style
+  preformattedCode: false         // Don't preserve formatting
+})
+```
+
+## Error Handling
+
+Turndown validates input and throws a `TypeError` for invalid input:
+
+```javascript
+var turndownService = new TurndownService()
+
+try {
+  // This will throw a TypeError
+  var markdown = turndownService.turndown(null)
+} catch (error) {
+  console.error(error.message)
+  // "null is not a string, or an element/document/fragment node."
+}
+```
+
+<Warning>
+Always validate input before passing it to Turndown, especially when processing user-generated content.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Custom Rules" icon="code" href="/guides/custom-rules">
+    Extend Turndown with custom conversion rules for specialized HTML elements
+  </Card>
+  <Card title="GFM Plugin" icon="puzzle-piece" href="/guides/gfm-plugin">
+    Add GitHub Flavored Markdown features like tables and strikethrough
+  </Card>
+</CardGroup>

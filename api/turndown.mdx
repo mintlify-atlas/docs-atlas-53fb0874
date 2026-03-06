@@ -1,0 +1,78 @@
+---
+title: "turndown"
+description: "Convert HTML strings or DOM nodes to Markdown"
+---
+
+## Syntax
+
+```javascript
+turndownService.turndown(input)
+```
+
+## Description
+
+The entry point for converting a string or DOM node to Markdown. This method accepts either an HTML string or a DOM node (element, document, or document fragment) and returns its Markdown representation.
+
+## Parameters
+
+<ParamField path="input" type="string | HTMLElement" required>
+  The HTML string or DOM node to convert to Markdown. Can be:
+  - A string containing HTML
+  - An element node (nodeType 1)
+  - A document node (nodeType 9)
+  - A document fragment node (nodeType 11)
+</ParamField>
+
+## Returns
+
+<ResponseField name="markdown" type="string">
+  A Markdown representation of the input HTML
+</ResponseField>
+
+## Errors
+
+Throws a `TypeError` if:
+- Input is not a string or valid DOM node
+- Input type cannot be converted
+
+Error message: `"[input] is not a string, or an element/document/fragment node."`
+
+## Examples
+
+### Convert HTML String
+
+```javascript
+var TurndownService = require('turndown')
+var turndownService = new TurndownService()
+
+var markdown = turndownService.turndown('<h1>Hello world!</h1>')
+// Result: # Hello world!
+```
+
+### Convert DOM Element
+
+```javascript
+var markdown = turndownService.turndown(document.getElementById('content'))
+```
+
+### Empty String
+
+```javascript
+var markdown = turndownService.turndown('')
+// Result: ''
+```
+
+### Complex HTML
+
+```javascript
+var html = '<p>This is <strong>bold</strong> and <em>italic</em> text.</p>'
+var markdown = turndownService.turndown(html)
+// Result: This is **bold** and _italic_ text.
+```
+
+## Notes
+
+- Returns an empty string if the input is an empty string
+- The method processes the input through all configured rules
+- Text content is automatically escaped to prevent Markdown syntax conflicts
+- Whitespace is normalized according to CommonMark specification

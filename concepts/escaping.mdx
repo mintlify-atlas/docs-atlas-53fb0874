@@ -1,0 +1,313 @@
+---
+title: 'Escaping'
+description: 'How Turndown escapes Markdown special characters'
+---
+
+Turndown automatically escapes Markdown special characters in HTML content to ensure they are rendered as literal text rather than being interpreted as Markdown syntax.
+
+## Why Escaping Is Needed
+
+Markdown uses special characters to define formatting. When converting HTML to Markdown, these characters in the original content need to be escaped to preserve their literal meaning.
+
+For example, without escaping:
+
+```html
+<h1>1. Hello world</h1>
+```
+
+Would convert to:
+
+```markdown
+1. Hello world
+=========
+```
+
+When rendered, this would be interpreted as a numbered list item instead of a heading. With proper escaping:
+
+```markdown
+1\. Hello world
+===============
+```
+
+The period is escaped, ensuring it renders as a heading.
+
+## Escaped Characters
+
+Turndown escapes the following Markdown special characters:
+
+<ParamField path="\\" type="Backslash">
+  Escaped to: `\\`
+  
+  Backslashes themselves need escaping since they're the escape character.
+</ParamField>
+
+<ParamField path="*" type="Asterisk">
+  Escaped to: `\*`
+  
+  Prevents interpretation as emphasis, strong text, or list markers.
+</ParamField>
+
+<ParamField path="-" type="Hyphen (at line start)">
+  Escaped to: `\-`
+  
+  Prevents interpretation as list markers or setext heading underlines.
+  
+  Only escaped when it appears at the start of a line.
+</ParamField>
+
+<ParamField path="+" type="Plus (at line start with space)">
+  Escaped to: `\+`
+  
+  Prevents interpretation as a list marker.
+  
+  Pattern: `^+ ` (plus at start of line followed by space)
+</ParamField>
+
+<ParamField path="=" type="Equals signs (at line start)">
+  Escaped to: `\=`
+  
+  Prevents interpretation as setext heading underlines.
+  
+  Pattern: `^(=+)` (one or more equals signs at line start)
+</ParamField>
+
+<ParamField path="#" type="Hash (at line start with space)">
+  Escaped to: `\#`
+  
+  Prevents interpretation as ATX heading markers.
+  
+  Pattern: `^(#{1,6}) ` (1-6 hashes at start of line followed by space)
+</ParamField>
+
+<ParamField path="`" type="Backtick">
+  Escaped to: `` \` ``
+  
+  Prevents interpretation as inline code or code block delimiters.
+</ParamField>
+
+<ParamField path="~~~" type="Tildes (at line start)">
+  Escaped to: `\~~~`
+  
+  Prevents interpretation as fenced code block delimiters.
+  
+  Pattern: `^~~~` (three tildes at start of line)
+</ParamField>
+
+<ParamField path="[" type="Left bracket">
+  Escaped to: `\[`
+  
+  Prevents interpretation as link or image syntax.
+</ParamField>
+
+<ParamField path="]" type="Right bracket">
+  Escaped to: `\]`
+  
+  Prevents interpretation as link or image syntax.
+</ParamField>
+
+<ParamField path=">" type="Greater than (at line start)">
+  Escaped to: `\>`
+  
+  Prevents interpretation as blockquote markers.
+  
+  Only escaped when it appears at the start of a line.
+</ParamField>
+
+<ParamField path="_" type="Underscore">
+  Escaped to: `\_`
+  
+  Prevents interpretation as emphasis markers.
+</ParamField>
+
+<ParamField path="1." type="Numbered list (at line start)">
+  Escaped to: `1\.`
+  
+  Prevents interpretation as ordered list items.
+  
+  Pattern: `^(\d+). ` (digits followed by period and space at line start)
+</ParamField>
+
+## Escape Patterns
+
+The escape patterns are defined in the source code at src/turndown.js:7-21:
+
+```javascript
+var escapes = [
+  [/\\/g, '\\\\'],
+  [/\*/g, '\\*'],
+  [/^-/g, '\\-'],
+  [/^\+ /g, '\\+ '],
+  [/^(=+)/g, '\\$1'],
+  [/^(#{1,6}) /g, '\\$1 '],
+  [/`/g, '\\`'],
+  [/^~~~/g, '\\~~~'],
+  [/\[/g, '\\['],
+  [/\]/g, '\\]'],
+  [/^>/g, '\\>'],
+  [/_/g, '\\_'],
+  [/^(\d+)\. /g, '$1\\. ']
+]
+```
+
+These patterns are applied using JavaScript's `String.prototype.replace()` method.
+
+## How Escaping Works
+
+Turndown escapes text in two stages:
+
+### 1. During Node Processing
+
+When processing DOM nodes, text nodes are escaped unless they're inside code elements (src/turndown.js:164):
+
+```javascript
+if (node.nodeType === 3) {
+  replacement = node.isCode ? node.nodeValue : self.escape(node.nodeValue)
+}
+```
+
+<Note>
+  Text inside `<code>` and `<pre>` elements is **never escaped** because code should be displayed literally.
+</Note>
+
+### 2. The Escape Method
+
+The `escape()` method applies all escape patterns sequentially (src/turndown.js:142-146):
+
+```javascript
+escape: function (string) {
+  return escapes.reduce(function (accumulator, escape) {
+    return accumulator.replace(escape[0], escape[1])
+  }, string)
+}
+```
+
+Each pattern is applied to the accumulating result, ensuring all special characters are properly escaped.
+
+## Examples
+
+### Escaping List Markers
+
+```javascript
+var html = '<p>1. This is not a list</p>'
+var markdown = turndownService.turndown(html)
+// Result: "1\. This is not a list"
+```
+
+### Escaping Heading Markers
+
+```javascript
+var html = '<p># Not a heading</p>'
+var markdown = turndownService.turndown(html)
+// Result: "\# Not a heading"
+```
+
+### Escaping Emphasis
+
+```javascript
+var html = '<p>This uses *asterisks* literally</p>'
+var markdown = turndownService.turndown(html)
+// Result: "This uses \*asterisks\* literally"
+```
+
+### Escaping Links
+
+```javascript
+var html = '<p>[Not a link]</p>'
+var markdown = turndownService.turndown(html)
+// Result: "\[Not a link\]"
+```
+
+### Code Is Not Escaped
+
+```javascript
+var html = '<code>var x = 1 * 2</code>'
+var markdown = turndownService.turndown(html)
+// Result: "`var x = 1 * 2`" (asterisk is NOT escaped)
+```
+
+## Customizing Escape Behavior
+
+You can customize the escape behavior by overriding the `escape` method on the TurndownService prototype.
+
+<Warning>
+  Only customize escaping if you fully understand the implications. Incorrect escaping can break Markdown rendering.
+</Warning>
+
+### Custom Escape Method
+
+```javascript
+var TurndownService = require('turndown')
+
+// Override the escape method
+TurndownService.prototype.escape = function (string) {
+  // Custom escape logic
+  return string
+    .replace(/\\/g, '\\\\')
+    .replace(/\*/g, '\\*')
+    .replace(/`/g, '\\`')
+  // Add only the patterns you need
+}
+
+var turndownService = new TurndownService()
+```
+
+### Less Aggressive Escaping
+
+The default escaping can be aggressive. If you're confident your content won't create ambiguous Markdown:
+
+```javascript
+TurndownService.prototype.escape = function (string) {
+  // Only escape the most critical characters
+  return string
+    .replace(/\\/g, '\\\\')
+    .replace(/\[/g, '\\[')
+    .replace(/\]/g, '\\]')
+}
+```
+
+### Context-Aware Escaping
+
+For more sophisticated escaping based on context:
+
+```javascript
+TurndownService.prototype.escape = function (string) {
+  // Store the original method
+  var original = escapes.reduce(function (acc, escape) {
+    return acc.replace(escape[0], escape[1])
+  }, string)
+  
+  // Add custom logic
+  if (this.currentNode && this.currentNode.nodeName === 'TD') {
+    // Additional escaping for table cells
+    return original.replace(/\|/g, '\\|')
+  }
+  
+  return original
+}
+```
+
+## Escaping Performance
+
+Turndown's escaping approach is optimized for correctness rather than performance:
+
+1. **Regular expression based** - Uses regex patterns for pattern matching
+2. **Sequential application** - Applies each escape pattern in order
+3. **Applied to all text nodes** - Escapes every text node except code
+
+From the README (line 222-223):
+
+> To avoid the complexity and the performance implications of parsing the content of every HTML element as Markdown, Turndown uses a group of regular expressions to escape potential Markdown syntax.
+
+As a result:
+
+<Note>
+  **The escaping rules can be quite aggressive.** Some text may be escaped even when it wouldn't actually be interpreted as Markdown in practice.
+</Note>
+
+This trade-off ensures correctness at the cost of occasionally over-escaping content.
+
+## Related
+
+- [Rules](/concepts/rules) - Learn about custom conversion rules
+- [Conversion Options](/concepts/conversion-options) - Configure conversion behavior
+- [API Reference](/api/escape) - Detailed escape() method documentation

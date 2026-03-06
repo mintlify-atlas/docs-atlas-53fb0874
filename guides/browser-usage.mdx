@@ -1,0 +1,153 @@
+---
+title: Browser Usage
+description: Learn how to use Turndown in the browser to convert HTML to Markdown on the client side
+---
+
+## Loading via CDN
+
+The easiest way to use Turndown in the browser is to load it from a CDN:
+
+```html
+<script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+<script>
+  var turndownService = new TurndownService()
+  var markdown = turndownService.turndown('<h1>Hello world!</h1>')
+  console.log(markdown) // # Hello world!
+</script>
+```
+
+The library is exposed as a global `TurndownService` constructor that you can instantiate and use immediately.
+
+## Loading via RequireJS/UMD
+
+For projects using RequireJS or other UMD-compatible module loaders, Turndown provides a browser-specific UMD build:
+
+```javascript
+require(['turndown'], function(TurndownService) {
+  var turndownService = new TurndownService()
+  var markdown = turndownService.turndown('<p>Convert this HTML</p>')
+})
+```
+
+The UMD build is located at `lib/turndown.browser.umd.js` in the npm package. If you need to generate it manually:
+
+```bash
+npm run build
+```
+
+<Note>
+The browser UMD build excludes the `@mixmark-io/domino` dependency, which is only needed for Node.js environments.
+</Note>
+
+## Working with DOM Elements
+
+One of Turndown's most powerful features in the browser is its ability to accept DOM nodes directly as input:
+
+```javascript
+var turndownService = new TurndownService()
+
+// Convert a specific element
+var markdown = turndownService.turndown(document.getElementById('content'))
+
+// Convert the entire document
+var markdown = turndownService.turndown(document)
+
+// Convert a document fragment
+var fragment = document.createDocumentFragment()
+// ... add nodes to fragment
+var markdown = turndownService.turndown(fragment)
+```
+
+<Note>
+Turndown accepts element nodes (nodeType 1), document nodes (nodeType 9), and document fragment nodes (nodeType 11).
+</Note>
+
+## Complete Browser Example
+
+Here's a complete example of a browser-based HTML to Markdown converter:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>HTML to Markdown Converter</title>
+  <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+</head>
+<body>
+  <h1>HTML to Markdown Converter</h1>
+  
+  <div id="content">
+    <h2>Sample Content</h2>
+    <p>This is a <strong>paragraph</strong> with <em>formatting</em>.</p>
+    <ul>
+      <li>List item 1</li>
+      <li>List item 2</li>
+    </ul>
+  </div>
+  
+  <button onclick="convert()">Convert to Markdown</button>
+  <pre id="output"></pre>
+  
+  <script>
+    var turndownService = new TurndownService({
+      headingStyle: 'atx',
+      codeBlockStyle: 'fenced'
+    })
+    
+    function convert() {
+      var element = document.getElementById('content')
+      var markdown = turndownService.turndown(element)
+      document.getElementById('output').textContent = markdown
+    }
+  </script>
+</body>
+</html>
+```
+
+## Browser-Specific Considerations
+
+### Package Configuration
+
+The `package.json` uses the `browser` field to provide browser-specific builds:
+
+```json
+{
+  "browser": {
+    "@mixmark-io/domino": false,
+    "./lib/turndown.cjs.js": "./lib/turndown.browser.cjs.js",
+    "./lib/turndown.es.js": "./lib/turndown.browser.es.js",
+    "./lib/turndown.umd.js": "./lib/turndown.browser.umd.js"
+  }
+}
+```
+
+This ensures that when bundlers like webpack or browserify process your code, they automatically use the browser-optimized builds.
+
+### Input Validation
+
+Turndown validates that the input can be converted before processing:
+
+<Warning>
+If you pass invalid input (not a string or valid DOM node), Turndown will throw a TypeError:
+`input is not a string, or an element/document/fragment node.`
+</Warning>
+
+### Empty Input
+
+When given an empty string, Turndown returns an empty string immediately without processing:
+
+```javascript
+var markdown = turndownService.turndown('')
+console.log(markdown) // ''
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Custom Rules" icon="code" href="/guides/custom-rules">
+    Learn how to create custom conversion rules for specialized HTML elements
+  </Card>
+  <Card title="GFM Plugin" icon="puzzle-piece" href="/guides/gfm-plugin">
+    Add GitHub Flavored Markdown support with tables and strikethrough
+  </Card>
+</CardGroup>

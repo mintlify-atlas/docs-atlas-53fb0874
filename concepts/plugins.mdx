@@ -1,0 +1,345 @@
+---
+title: 'Plugins'
+description: 'Extend Turndown with reusable plugin packages'
+---
+
+Plugins provide a convenient way to package and distribute multiple rules and customizations as a single reusable module. A plugin is simply a function that receives the TurndownService instance and configures it.
+
+## What Are Plugins?
+
+A plugin is a function that takes a TurndownService instance and extends it with custom rules, options, or behavior:
+
+```javascript
+function myPlugin(turndownService) {
+  turndownService.addRule('myRule', {
+    // rule definition
+  })
+}
+```
+
+Plugins are applied using the `use()` method:
+
+```javascript
+var turndownService = new TurndownService()
+turndownService.use(myPlugin)
+```
+
+## Using Plugins
+
+The `use()` method accepts either a single plugin function or an array of plugins.
+
+### Single Plugin
+
+```javascript
+var turndownPluginGfm = require('turndown-plugin-gfm')
+var gfm = turndownPluginGfm.gfm
+
+var turndownService = new TurndownService()
+turndownService.use(gfm)
+```
+
+### Multiple Plugins
+
+```javascript
+var turndownPluginGfm = require('turndown-plugin-gfm')
+var tables = turndownPluginGfm.tables
+var strikethrough = turndownPluginGfm.strikethrough
+
+var turndownService = new TurndownService()
+turndownService.use([tables, strikethrough])
+```
+
+<Note>
+  `use()` returns the TurndownService instance, allowing you to chain method calls.
+</Note>
+
+## Official Plugins
+
+### turndown-plugin-gfm
+
+Adds support for GitHub Flavored Markdown (GFM) extensions:
+
+```javascript
+var TurndownService = require('turndown')
+var turndownPluginGfm = require('turndown-plugin-gfm')
+
+var gfm = turndownPluginGfm.gfm
+var tables = turndownPluginGfm.tables
+var strikethrough = turndownPluginGfm.strikethrough
+var taskListItems = turndownPluginGfm.taskListItems
+
+var turndownService = new TurndownService()
+
+// Use all GFM features
+turndownService.use(gfm)
+
+// Or use specific features only
+turndownService.use([tables, strikethrough])
+```
+
+**Available plugins:**
+- `gfm` - All GFM features (combines all plugins below)
+- `tables` - Table support
+- `strikethrough` - Strikethrough text (`~~text~~`)
+- `taskListItems` - Task list checkboxes
+
+**Installation:**
+```bash
+npm install turndown-plugin-gfm
+```
+
+## Creating Custom Plugins
+
+Create a plugin by writing a function that configures a TurndownService instance.
+
+### Basic Plugin Structure
+
+```javascript
+function myPlugin(turndownService) {
+  // Add custom rules
+  turndownService.addRule('myRule', {
+    filter: 'custom-element',
+    replacement: function (content) {
+      return '**' + content + '**'
+    }
+  })
+}
+
+// Use the plugin
+turndownService.use(myPlugin)
+```
+
+### Plugin with Multiple Rules
+
+```javascript
+function enhancedMarkdown(turndownService) {
+  // Add support for <mark> elements
+  turndownService.addRule('highlight', {
+    filter: 'mark',
+    replacement: function (content) {
+      return '==' + content + '=='
+    }
+  })
+  
+  // Add support for <abbr> elements
+  turndownService.addRule('abbreviation', {
+    filter: 'abbr',
+    replacement: function (content, node) {
+      var title = node.getAttribute('title')
+      return title ? content + ' (' + title + ')' : content
+    }
+  })
+  
+  // Add support for <kbd> elements
+  turndownService.addRule('keyboard', {
+    filter: 'kbd',
+    replacement: function (content) {
+      return '<kbd>' + content + '</kbd>'
+    }
+  })
+}
+
+turndownService.use(enhancedMarkdown)
+```
+
+### Plugin with Options
+
+Create a plugin factory that accepts configuration:
+
+```javascript
+function highlightPlugin(options) {
+  options = options || {}
+  var delimiter = options.delimiter || '=='
+  var tag = options.tag || 'mark'
+  
+  return function (turndownService) {
+    turndownService.addRule('highlight', {
+      filter: tag,
+      replacement: function (content) {
+        return delimiter + content + delimiter
+      }
+    })
+  }
+}
+
+// Use with default options
+turndownService.use(highlightPlugin())
+
+// Use with custom options
+turndownService.use(highlightPlugin({
+  delimiter: '::',
+  tag: 'mark'
+}))
+```
+
+### Plugin that Modifies Service Behavior
+
+Plugins can do more than add rules:
+
+```javascript
+function debugPlugin(turndownService) {
+  // Wrap the original escape method
+  var originalEscape = turndownService.escape
+  turndownService.escape = function (string) {
+    console.log('Escaping:', string)
+    return originalEscape.call(this, string)
+  }
+  
+  // Add a custom keep filter
+  turndownService.keep(function (node) {
+    // Keep all elements with data-keep attribute
+    return node.getAttribute && node.getAttribute('data-keep') === 'true'
+  })
+}
+
+turndownService.use(debugPlugin)
+```
+
+## Packaging Plugins
+
+When creating a plugin package for distribution:
+
+### Module Structure
+
+```javascript
+// index.js
+function myPlugin(turndownService) {
+  // Plugin implementation
+}
+
+// Export for CommonJS
+module.exports = myPlugin
+
+// Export for ES modules
+export default myPlugin
+```
+
+### Exporting Multiple Plugins
+
+```javascript
+// index.js
+function tables(turndownService) {
+  // Tables implementation
+}
+
+function strikethrough(turndownService) {
+  // Strikethrough implementation
+}
+
+function all(turndownService) {
+  tables(turndownService)
+  strikethrough(turndownService)
+}
+
+module.exports = {
+  tables: tables,
+  strikethrough: strikethrough,
+  all: all
+}
+```
+
+## Complete Plugin Example
+
+Here's a complete plugin that adds support for Bootstrap alert components:
+
+```javascript
+function bootstrapAlertsPlugin(turndownService) {
+  // Convert Bootstrap alerts to blockquotes with emoji
+  turndownService.addRule('bootstrapAlert', {
+    filter: function (node) {
+      return node.nodeName === 'DIV' && 
+             node.classList.contains('alert')
+    },
+    replacement: function (content, node) {
+      var type = 'info'
+      if (node.classList.contains('alert-warning')) type = 'warning'
+      else if (node.classList.contains('alert-danger')) type = 'danger'
+      else if (node.classList.contains('alert-success')) type = 'success'
+      
+      var emoji = {
+        info: 'ℹ️',
+        warning: '⚠️',
+        danger: '🚨',
+        success: '✅'
+      }[type]
+      
+      content = content.trim().replace(/\n/g, '\n> ')
+      return '\n\n> ' + emoji + ' **' + type.toUpperCase() + '**\n> ' + content + '\n\n'
+    }
+  })
+  
+  // Remove dismiss buttons
+  turndownService.remove(function (node) {
+    return node.classList && 
+           node.classList.contains('alert-dismissible')
+  })
+}
+
+// Usage
+var TurndownService = require('turndown')
+var turndownService = new TurndownService()
+turndownService.use(bootstrapAlertsPlugin)
+
+var html = '<div class="alert alert-warning">Be careful!</div>'
+var markdown = turndownService.turndown(html)
+// > ⚠️ **WARNING**
+// > Be careful!
+```
+
+## Plugin Best Practices
+
+<Warning>
+  Plugins should not modify the TurndownService options object. Let users configure options when instantiating the service.
+</Warning>
+
+<Note>
+  **Best practices:**
+  
+  - Keep plugins focused on a single feature or set of related features
+  - Document all rules and behavior your plugin adds
+  - Test plugins with various HTML inputs
+  - Consider edge cases (empty content, nested elements, etc.)
+  - Follow Markdown and CommonMark specifications
+  - Provide options for customization when appropriate
+</Note>
+
+## Loading Plugins
+
+Plugins can be loaded in different ways depending on your environment:
+
+### Node.js
+
+```javascript
+var TurndownService = require('turndown')
+var gfm = require('turndown-plugin-gfm').gfm
+
+var turndownService = new TurndownService()
+turndownService.use(gfm)
+```
+
+### ES Modules
+
+```javascript
+import TurndownService from 'turndown'
+import { gfm } from 'turndown-plugin-gfm'
+
+const turndownService = new TurndownService()
+turndownService.use(gfm)
+```
+
+### Browser (CDN)
+
+```html
+<script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+<script src="https://unpkg.com/turndown-plugin-gfm/dist/turndown-plugin-gfm.js"></script>
+<script>
+  var turndownService = new TurndownService()
+  turndownService.use(turndownPluginGfm.gfm)
+</script>
+```
+
+## Related
+
+- [Rules](/concepts/rules) - Learn about the rule system that powers plugins
+- [API Reference](/api/use) - Detailed use() method documentation
+- [Examples](/examples/custom-plugins) - More plugin examples

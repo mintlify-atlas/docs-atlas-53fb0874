@@ -1,0 +1,130 @@
+---
+title: "remove"
+description: "Remove HTML elements from the conversion output"
+---
+
+## Syntax
+
+```javascript
+turndownService.remove(filter)
+```
+
+## Description
+
+Determines which HTML elements should be completely removed from the output (converted to an empty string). Both the element and its contents are removed. By default, Turndown does not remove any elements.
+
+## Parameters
+
+<ParamField path="filter" type="string | array | function" required>
+  Specifies which elements to remove:
+  - **String**: A single tag name (e.g., `'del'`)
+  - **Array**: Multiple tag names (e.g., `['script', 'style']`)
+  - **Function**: Custom filter function `(node, options) => boolean`
+</ParamField>
+
+## Returns
+
+<ResponseField name="instance" type="TurndownService">
+  Returns the TurndownService instance for method chaining
+</ResponseField>
+
+## Examples
+
+### Remove Single Element
+
+```javascript
+turndownService.remove('del')
+turndownService.turndown('<p>Hello <del>world</del><ins>World</ins></p>')
+// Result: Hello World
+```
+
+### Remove Multiple Elements
+
+```javascript
+turndownService.remove(['script', 'style', 'noscript'])
+turndownService.turndown(`
+  <style>body { color: red; }</style>
+  <p>Hello World</p>
+  <script>alert('test')</script>
+`)
+// Result: Hello World
+```
+
+### Remove with Custom Filter
+
+```javascript
+turndownService.remove(function (node) {
+  return node.nodeName === 'DIV' && node.getAttribute('class') === 'ad'
+})
+
+turndownService.turndown(`
+  <div>Keep this</div>
+  <div class="ad">Remove this ad</div>
+  <p>Content</p>
+`)
+// Result:
+// Keep this
+//
+// Content
+```
+
+### Remove Comments or Metadata
+
+```javascript
+turndownService.remove(['meta', 'link', 'script', 'style'])
+turndownService.turndown(`
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="style.css">
+  <h1>Title</h1>
+  <p>Content</p>
+`)
+// Result:
+// # Title
+//
+// Content
+```
+
+### Chaining Remove Calls
+
+```javascript
+turndownService
+  .remove('script')
+  .remove('style')
+  .remove(function (node) {
+    return node.nodeName === 'IMG' && !node.getAttribute('alt')
+  })
+```
+
+## Behavior Details
+
+### Element and Contents Removed
+
+Both the element and all its contents are removed:
+
+```javascript
+turndownService.remove('div')
+turndownService.turndown('<p>Before</p><div><strong>Nested</strong> content</div><p>After</p>')
+// Result:
+// Before
+//
+// After
+```
+
+### Whitespace Handling
+
+Removing elements doesn't leave extra whitespace:
+
+```javascript
+turndownService.remove('span')
+turndownService.turndown('<p>Hello <span>world</span> there</p>')
+// Result: Hello  there
+```
+
+## Notes
+
+- Returns the instance to enable method chaining
+- Can be called multiple times; newer filters take precedence
+- Remove filters are overridden by keep filters, CommonMark rules, and added rules
+- To remove elements normally handled by those rules, add a custom rule instead
+- Removes both the element tags and all content inside them
+- Use `keep()` if you want to preserve the HTML but not convert it

@@ -1,0 +1,158 @@
+---
+title: "use"
+description: "Add plugins to extend TurndownService functionality"
+---
+
+## Syntax
+
+```javascript
+turndownService.use(plugin)
+turndownService.use([plugin1, plugin2, ...])
+```
+
+## Description
+
+Loads one or more plugins to extend TurndownService functionality. Plugins are functions that receive the TurndownService instance and can add rules, modify options, or apply multiple extensions at once.
+
+## Parameters
+
+<ParamField path="plugin" type="function | array" required>
+  A plugin function or array of plugin functions:
+  - **Function**: A plugin that receives the TurndownService instance
+  - **Array**: Multiple plugins to be applied in order
+  
+  Plugin signature: `(turndownService) => void`
+</ParamField>
+
+## Returns
+
+<ResponseField name="instance" type="TurndownService">
+  Returns the TurndownService instance for method chaining
+</ResponseField>
+
+## Errors
+
+Throws a `TypeError` if:
+- Plugin is not a function or array of functions
+
+Error message: `"plugin must be a Function or an Array of Functions"`
+
+## Examples
+
+### Using GFM Plugin
+
+```javascript
+var TurndownService = require('turndown')
+var turndownPluginGfm = require('turndown-plugin-gfm')
+
+var turndownService = new TurndownService()
+var gfm = turndownPluginGfm.gfm
+
+turndownService.use(gfm)
+```
+
+### Using Multiple Plugins
+
+```javascript
+var turndownPluginGfm = require('turndown-plugin-gfm')
+var tables = turndownPluginGfm.tables
+var strikethrough = turndownPluginGfm.strikethrough
+
+turndownService.use([tables, strikethrough])
+```
+
+### Creating a Custom Plugin
+
+```javascript
+function myPlugin(turndownService) {
+  turndownService.addRule('underline', {
+    filter: 'u',
+    replacement: function (content) {
+      return '__' + content + '__'
+    }
+  })
+  
+  turndownService.addRule('highlight', {
+    filter: 'mark',
+    replacement: function (content) {
+      return '==' + content + '=='
+    }
+  })
+}
+
+turndownService.use(myPlugin)
+```
+
+### Chaining with Other Methods
+
+```javascript
+turndownService
+  .use(gfm)
+  .keep(['sub', 'sup'])
+  .remove('style')
+```
+
+### Plugin with Configuration
+
+```javascript
+function configurablePlugin(options) {
+  return function (turndownService) {
+    turndownService.addRule('custom', {
+      filter: options.filter,
+      replacement: function (content) {
+        return options.prefix + content + options.suffix
+      }
+    })
+  }
+}
+
+turndownService.use(configurablePlugin({
+  filter: 'kbd',
+  prefix: '`',
+  suffix: '`'
+}))
+```
+
+### Multiple Plugins in Sequence
+
+```javascript
+var plugins = [
+  turndownPluginGfm.tables,
+  turndownPluginGfm.strikethrough,
+  turndownPluginGfm.taskListItems
+]
+
+turndownService.use(plugins)
+```
+
+## Plugin Structure
+
+A plugin is simply a function that receives the TurndownService instance:
+
+```javascript
+function myPlugin(turndownService) {
+  // Add rules
+  turndownService.addRule('ruleName', { /* rule definition */ })
+  
+  // Keep elements
+  turndownService.keep(['element1', 'element2'])
+  
+  // Remove elements
+  turndownService.remove('element3')
+  
+  // Modify options
+  turndownService.options.customOption = 'value'
+}
+```
+
+## Notes
+
+- Returns the instance to enable method chaining
+- Plugins are applied in the order they are provided
+- When passing an array, each plugin is applied sequentially
+- Plugins have full access to the TurndownService instance and can:
+  - Add custom rules
+  - Configure keep/remove filters
+  - Modify options
+  - Override methods
+- Popular plugins include `turndown-plugin-gfm` for GitHub Flavored Markdown support

@@ -1,0 +1,384 @@
+---
+title: Custom Rules
+description: Learn how to create custom conversion rules to extend Turndown's functionality
+---
+
+Turndown can be extended with custom **rules** to handle specialized HTML elements or customize the conversion output. A rule is a plain JavaScript object with `filter` and `replacement` properties.
+
+## Rule Structure
+
+Every rule consists of two main parts:
+
+```javascript
+{
+  filter: 'element-name',  // or array or function
+  replacement: function (content, node, options) {
+    return '/* markdown output */'
+  }
+}
+```
+
+## Creating Your First Custom Rule
+
+<Steps>
+  <Step title="Understand the basic structure">
+    Let's create a rule for converting `<del>` elements to strikethrough syntax:
+    
+    ```javascript
+    var TurndownService = require('turndown')
+    var turndownService = new TurndownService()
+    
+    turndownService.addRule('strikethrough', {
+      filter: ['del', 's', 'strike'],
+      replacement: function (content) {
+        return '~' + content + '~'
+      }
+    })
+    ```
+  </Step>
+  
+  <Step title="Test the rule">
+    Now use it to convert HTML:
+    
+    ```javascript
+    var html = '<p>This is <del>deleted</del> text</p>'
+    var markdown = turndownService.turndown(html)
+    
+    console.log(markdown)
+    // Output: This is ~deleted~ text
+    ```
+  </Step>
+  
+  <Step title="Chain multiple rules">
+    The `addRule` method returns the service instance, enabling method chaining:
+    
+    ```javascript
+    turndownService
+      .addRule('strikethrough', {
+        filter: ['del', 's', 'strike'],
+        replacement: function (content) {
+          return '~' + content + '~'
+        }
+      })
+      .addRule('underline', {
+        filter: 'u',
+        replacement: function (content) {
+          return '_' + content + '_'
+        }
+      })
+    ```
+  </Step>
+</Steps>
+
+## Filter Types
+
+The `filter` property determines which elements a rule applies to. There are three types of filters:
+
+### String Filter
+
+Select elements by tag name:
+
+```javascript
+// From commonmark-rules.js
+rules.paragraph = {
+  filter: 'p',
+  replacement: function (content) {
+    return '\n\n' + content + '\n\n'
+  }
+}
+```
+
+<Note>
+Tag names in filters should be lowercase, regardless of their case in the HTML document.
+</Note>
+
+### Array Filter
+
+Select multiple element types with a single rule:
+
+```javascript
+// From commonmark-rules.js
+rules.heading = {
+  filter: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+  replacement: function (content, node, options) {
+    var hLevel = Number(node.nodeName.charAt(1))
+    
+    if (options.headingStyle === 'setext' && hLevel < 3) {
+      var underline = repeat((hLevel === 1 ? '=' : '-'), content.length)
+      return '\n\n' + content + '\n' + underline + '\n\n'
+    } else {
+      return '\n\n' + repeat('#', hLevel) + ' ' + content + '\n\n'
+    }
+  }
+}
+```
+
+Another example for emphasis:
+
+```javascript
+// From commonmark-rules.js
+rules.emphasis = {
+  filter: ['em', 'i'],
+  replacement: function (content, node, options) {
+    if (!content.trim()) return ''
+    return options.emDelimiter + content + options.emDelimiter
+  }
+}
+```
+
+### Function Filter
+
+Use a function for complex matching logic:
+
+```javascript
+// From commonmark-rules.js - Inline link rule
+rules.inlineLink = {
+  filter: function (node, options) {
+    return (
+      options.linkStyle === 'inlined' &&
+      node.nodeName === 'A' &&
+      node.getAttribute('href')
+    )
+  },
+  replacement: function (content, node) {
+    var href = node.getAttribute('href')
+    if (href) href = href.replace(/([()])/g, '\\$1')
+    var title = cleanAttribute(node.getAttribute('title'))
+    if (title) title = ' "' + title.replace(/"/g, '\\"') + '"'
+    return '[' + content + '](' + href + title + ')'
+  }
+}
+```
+
+Another example for fenced code blocks:
+
+```javascript
+// From commonmark-rules.js
+rules.fencedCodeBlock = {
+  filter: function (node, options) {
+    return (
+      options.codeBlockStyle === 'fenced' &&
+      node.nodeName === 'PRE' &&
+      node.firstChild &&
+      node.firstChild.nodeName === 'CODE'
+    )
+  },
+  replacement: function (content, node, options) {
+    var className = node.firstChild.getAttribute('class') || ''
+    var language = (className.match(/language-(\S+)/) || [null, ''])[1]
+    var code = node.firstChild.textContent
+    
+    var fenceChar = options.fence.charAt(0)
+    var fenceSize = 3
+    var fenceInCodeRegex = new RegExp('^' + fenceChar + '{3,}', 'gm')
+    
+    var match
+    while ((match = fenceInCodeRegex.exec(code))) {
+      if (match[0].length >= fenceSize) {
+        fenceSize = match[0].length + 1
+      }
+    }
+    
+    var fence = repeat(fenceChar, fenceSize)
+    
+    return (
+      '\n\n' + fence + language + '\n' +
+      code.replace(/\n$/, '') +
+      '\n' + fence + '\n\n'
+    )
+  }
+}
+```
+
+## Replacement Function
+
+The replacement function determines the Markdown output. It receives three parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `content` | String | The Markdown content of the node's children |
+| `node` | Node | The DOM node being converted |
+| `options` | Object | The TurndownService options |
+
+### Example: List Items
+
+Here's how Turndown handles list items from `commonmark-rules.js`:
+
+```javascript
+rules.listItem = {
+  filter: 'li',
+  replacement: function (content, node, options) {
+    var prefix = options.bulletListMarker + '   '
+    var parent = node.parentNode
+    
+    if (parent.nodeName === 'OL') {
+      var start = parent.getAttribute('start')
+      var index = Array.prototype.indexOf.call(parent.children, node)
+      prefix = (start ? Number(start) + index : index + 1) + '.  '
+    }
+    
+    var isParagraph = /\n$/.test(content)
+    content = trimNewlines(content) + (isParagraph ? '\n' : '')
+    content = content.replace(/\n/gm, '\n' + ' '.repeat(prefix.length))
+    
+    return prefix + content + (node.nextSibling ? '\n' : '')
+  }
+}
+```
+
+### Example: Blockquotes
+
+A simpler example from `commonmark-rules.js`:
+
+```javascript
+rules.blockquote = {
+  filter: 'blockquote',
+  replacement: function (content) {
+    content = trimNewlines(content).replace(/^/gm, '> ')
+    return '\n\n' + content + '\n\n'
+  }
+}
+```
+
+## Complete Custom Rule Examples
+
+### Highlight/Mark Elements
+
+```javascript
+turndownService.addRule('highlight', {
+  filter: 'mark',
+  replacement: function (content) {
+    return '==' + content + '=='
+  }
+})
+
+// Usage
+var html = '<p>This is <mark>highlighted</mark> text</p>'
+var markdown = turndownService.turndown(html)
+// Output: This is ==highlighted== text
+```
+
+### Custom Div Classes
+
+```javascript
+turndownService.addRule('alert', {
+  filter: function (node) {
+    return (
+      node.nodeName === 'DIV' &&
+      node.classList.contains('alert')
+    )
+  },
+  replacement: function (content, node) {
+    var type = node.getAttribute('data-type') || 'info'
+    return '\n\n> **' + type.toUpperCase() + '**: ' + content + '\n\n'
+  }
+})
+
+// Usage
+var html = '<div class="alert" data-type="warning">Be careful!</div>'
+var markdown = turndownService.turndown(html)
+// Output: > **WARNING**: Be careful!
+```
+
+### Abbreviations
+
+```javascript
+turndownService.addRule('abbreviation', {
+  filter: 'abbr',
+  replacement: function (content, node) {
+    var title = node.getAttribute('title')
+    return title ? content + ' (' + title + ')' : content
+  }
+})
+
+// Usage
+var html = '<abbr title="HyperText Markup Language">HTML</abbr>'
+var markdown = turndownService.turndown(html)
+// Output: HTML (HyperText Markup Language)
+```
+
+### Keyboard Input
+
+```javascript
+turndownService.addRule('keyboard', {
+  filter: 'kbd',
+  replacement: function (content) {
+    return '<kbd>' + content + '</kbd>'
+  }
+})
+
+// Usage
+var html = '<p>Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to copy</p>'
+var markdown = turndownService.turndown(html)
+// Output: Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to copy
+```
+
+## Rule Precedence
+
+When Turndown processes a node, it iterates through rules in this order:
+
+<Steps>
+  <Step title="Blank rule">
+    Handles blank elements (only whitespace). Overrides all other rules.
+  </Step>
+  
+  <Step title="Added rules">
+    Custom rules added via `addRule()`. Processed in the order they were added.
+  </Step>
+  
+  <Step title="CommonMark rules">
+    Built-in rules from `commonmark-rules.js` for standard Markdown elements.
+  </Step>
+  
+  <Step title="Keep rules">
+    Elements to keep as HTML (via `keep()` method).
+  </Step>
+  
+  <Step title="Remove rules">
+    Elements to remove entirely (via `remove()` method).
+  </Step>
+  
+  <Step title="Default rule">
+    Fallback rule for unrecognized elements.
+  </Step>
+</Steps>
+
+<Warning>
+Custom rules added via `addRule()` take precedence over built-in CommonMark rules. This allows you to override default behavior.
+</Warning>
+
+## Advanced Pattern: Accessing Node Properties
+
+Rules can access any DOM node property:
+
+```javascript
+turndownService.addRule('imageWithDimensions', {
+  filter: function (node) {
+    return (
+      node.nodeName === 'IMG' &&
+      node.getAttribute('src') &&
+      (node.getAttribute('width') || node.getAttribute('height'))
+    )
+  },
+  replacement: function (content, node) {
+    var alt = node.getAttribute('alt') || ''
+    var src = node.getAttribute('src')
+    var width = node.getAttribute('width')
+    var height = node.getAttribute('height')
+    var dimensions = width || height ? ' =' + (width || '') + 'x' + (height || '') : ''
+    
+    return '![' + alt + '](' + src + dimensions + ')'
+  }
+})
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="book" href="/api/add-rule">
+    Explore the complete API documentation for addRule
+  </Card>
+  <Card title="GFM Plugin" icon="puzzle-piece" href="/guides/gfm-plugin">
+    Learn about the GitHub Flavored Markdown plugin
+  </Card>
+</CardGroup>

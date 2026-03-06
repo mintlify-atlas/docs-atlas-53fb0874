@@ -1,0 +1,400 @@
+---
+title: GFM Plugin
+description: Add GitHub Flavored Markdown support to Turndown with tables, strikethrough, and task lists
+---
+
+## What is the GFM Plugin?
+
+The **turndown-plugin-gfm** extends Turndown with support for [GitHub Flavored Markdown](https://github.github.com/gfm/) (GFM) features that aren't part of the CommonMark specification. This includes:
+
+- **Tables** - Convert HTML tables to Markdown pipe tables
+- **Strikethrough** - Convert `<del>`, `<s>`, and `<strike>` to `~~strikethrough~~`
+- **Task lists** - Convert checkboxes to `- [ ]` and `- [x]` syntax
+- **Autolinks** - Improved handling of URLs
+
+<Note>
+The GFM plugin is maintained as a separate package and must be installed alongside Turndown.
+</Note>
+
+## Installation
+
+Install both Turndown and the GFM plugin:
+
+```bash
+npm install turndown turndown-plugin-gfm
+```
+
+## Using the Complete GFM Plugin
+
+The simplest approach is to use the complete `gfm` plugin, which includes all GFM features:
+
+```javascript
+// Import Turndown and the plugin
+var TurndownService = require('turndown')
+var turndownPluginGfm = require('turndown-plugin-gfm')
+
+// Get the gfm plugin
+var gfm = turndownPluginGfm.gfm
+
+// Create service and apply plugin
+var turndownService = new TurndownService()
+turndownService.use(gfm)
+
+// Convert HTML with GFM features
+var html = `
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Role</th>
+    </tr>
+    <tr>
+      <td>Alice</td>
+      <td>Developer</td>
+    </tr>
+  </table>
+  <p>This is <del>deleted</del> text</p>
+`
+
+var markdown = turndownService.turndown(html)
+console.log(markdown)
+```
+
+Output:
+```markdown
+| Name  | Role      |
+| ----- | --------- |
+| Alice | Developer |
+
+This is ~~deleted~~ text
+```
+
+## Using Individual Plugins
+
+You can also use specific GFM features individually:
+
+```javascript
+var TurndownService = require('turndown')
+var turndownPluginGfm = require('turndown-plugin-gfm')
+
+// Import individual plugins
+var tables = turndownPluginGfm.tables
+var strikethrough = turndownPluginGfm.strikethrough
+
+// Use only the plugins you need
+var turndownService = new TurndownService()
+turndownService.use([tables, strikethrough])
+```
+
+<Tabs>
+  <Tab title="Tables Only">
+    ```javascript
+    var TurndownService = require('turndown')
+    var turndownPluginGfm = require('turndown-plugin-gfm')
+    var tables = turndownPluginGfm.tables
+    
+    var turndownService = new TurndownService()
+    turndownService.use(tables)
+    
+    var html = `
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Supported</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Tables</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <td>Complex nesting</td>
+            <td>Limited</td>
+          </tr>
+        </tbody>
+      </table>
+    `
+    
+    var markdown = turndownService.turndown(html)
+    console.log(markdown)
+    ```
+    
+    Output:
+    ```markdown
+    | Feature         | Supported |
+    | --------------- | --------- |
+    | Tables          | Yes       |
+    | Complex nesting | Limited   |
+    ```
+  </Tab>
+  
+  <Tab title="Strikethrough Only">
+    ```javascript
+    var TurndownService = require('turndown')
+    var turndownPluginGfm = require('turndown-plugin-gfm')
+    var strikethrough = turndownPluginGfm.strikethrough
+    
+    var turndownService = new TurndownService()
+    turndownService.use(strikethrough)
+    
+    var html = `
+      <p>Regular text</p>
+      <p><del>Deleted text</del></p>
+      <p><s>Strikethrough with s tag</s></p>
+      <p><strike>Strikethrough with strike tag</strike></p>
+    `
+    
+    var markdown = turndownService.turndown(html)
+    console.log(markdown)
+    ```
+    
+    Output:
+    ```markdown
+    Regular text
+    
+    ~~Deleted text~~
+    
+    ~~Strikethrough with s tag~~
+    
+    ~~Strikethrough with strike tag~~
+    ```
+  </Tab>
+  
+  <Tab title="Task Lists">
+    ```javascript
+    var TurndownService = require('turndown')
+    var turndownPluginGfm = require('turndown-plugin-gfm')
+    var taskListItems = turndownPluginGfm.taskListItems
+    
+    var turndownService = new TurndownService()
+    turndownService.use(taskListItems)
+    
+    var html = `
+      <ul>
+        <li><input type="checkbox" checked> Completed task</li>
+        <li><input type="checkbox"> Pending task</li>
+        <li>Regular list item</li>
+      </ul>
+    `
+    
+    var markdown = turndownService.turndown(html)
+    console.log(markdown)
+    ```
+    
+    Output:
+    ```markdown
+    - [x] Completed task
+    - [ ] Pending task
+    - Regular list item
+    ```
+  </Tab>
+</Tabs>
+
+## Available Plugins
+
+The `turndown-plugin-gfm` package exports the following plugins:
+
+| Plugin | Description | Handles |
+|--------|-------------|---------|
+| `gfm` | Complete GFM support | All GFM features |
+| `tables` | Table conversion | `<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th>`, `<td>` |
+| `strikethrough` | Strikethrough text | `<del>`, `<s>`, `<strike>` |
+| `taskListItems` | Task list checkboxes | `<input type="checkbox">` in list items |
+
+## Complete Example
+
+Here's a comprehensive example demonstrating all GFM features:
+
+<CodeGroup>
+```javascript Node.js
+const TurndownService = require('turndown')
+const { gfm } = require('turndown-plugin-gfm')
+
+const turndownService = new TurndownService({
+  headingStyle: 'atx',
+  codeBlockStyle: 'fenced'
+})
+
+turndownService.use(gfm)
+
+const html = `
+  <h1>Project Tasks</h1>
+  
+  <h2>Progress</h2>
+  <ul>
+    <li><input type="checkbox" checked> Set up repository</li>
+    <li><input type="checkbox" checked> Create initial docs</li>
+    <li><input type="checkbox"> Add tests</li>
+    <li><input type="checkbox"> Deploy to production</li>
+  </ul>
+  
+  <h2>Team Members</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Role</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Alice</td>
+        <td>Lead Developer</td>
+        <td>Active</td>
+      </tr>
+      <tr>
+        <td>Bob</td>
+        <td>Designer</td>
+        <td>Active</td>
+      </tr>
+      <tr>
+        <td>Charlie</td>
+        <td>Developer</td>
+        <td><del>On leave</del></td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <h2>Notes</h2>
+  <p>The old approach is <strike>deprecated</strike>. Use the new API instead.</p>
+`
+
+const markdown = turndownService.turndown(html)
+console.log(markdown)
+```
+
+```javascript Browser
+<script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+<script src="https://unpkg.com/turndown-plugin-gfm/dist/turndown-plugin-gfm.js"></script>
+
+<script>
+  var turndownService = new TurndownService()
+  var gfm = turndownPluginGfm.gfm
+  
+  turndownService.use(gfm)
+  
+  var html = document.getElementById('content').innerHTML
+  var markdown = turndownService.turndown(html)
+  
+  console.log(markdown)
+</script>
+```
+</CodeGroup>
+
+Output:
+```markdown
+# Project Tasks
+
+## Progress
+
+- [x] Set up repository
+- [x] Create initial docs
+- [ ] Add tests
+- [ ] Deploy to production
+
+## Team Members
+
+| Name    | Role           | Status       |
+| ------- | -------------- | ------------ |
+| Alice   | Lead Developer | Active       |
+| Bob     | Designer       | Active       |
+| Charlie | Developer      | ~~On leave~~ |
+
+## Notes
+
+The old approach is ~~deprecated~~. Use the new API instead.
+```
+
+## Combining with Custom Rules
+
+You can combine the GFM plugin with custom rules:
+
+```javascript
+var TurndownService = require('turndown')
+var { gfm } = require('turndown-plugin-gfm')
+
+var turndownService = new TurndownService()
+
+// Apply GFM plugin first
+turndownService.use(gfm)
+
+// Then add custom rules
+turndownService.addRule('highlight', {
+  filter: 'mark',
+  replacement: function (content) {
+    return '==' + content + '=='
+  }
+})
+
+var html = `
+  <p>This is <mark>highlighted</mark> and <del>deleted</del> text</p>
+  <table>
+    <tr><th>Column</th></tr>
+    <tr><td>Value</td></tr>
+  </table>
+`
+
+var markdown = turndownService.turndown(html)
+console.log(markdown)
+// Output includes both GFM features and custom highlight syntax
+```
+
+## Plugin Order
+
+When using multiple plugins, order matters:
+
+```javascript
+var turndownService = new TurndownService()
+
+// Plugin 1 is applied first
+turndownService.use(plugin1)
+
+// Plugin 2 can override rules from plugin 1
+turndownService.use(plugin2)
+
+// Custom rules can override plugin rules
+turndownService.addRule('customRule', { /* ... */ })
+```
+
+<Warning>
+Custom rules added via `addRule()` take precedence over plugin rules. Add plugins before custom rules if you want to override plugin behavior.
+</Warning>
+
+## Browser Usage
+
+The GFM plugin can be loaded via CDN for browser usage:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+  <script src="https://unpkg.com/turndown-plugin-gfm/dist/turndown-plugin-gfm.js"></script>
+</head>
+<body>
+  <script>
+    var turndownService = new TurndownService()
+    var gfm = turndownPluginGfm.gfm
+    
+    turndownService.use(gfm)
+    
+    // Now you can convert HTML with GFM features
+    var markdown = turndownService.turndown('<p>Text with <del>strikethrough</del></p>')
+    console.log(markdown) // Text with ~~strikethrough~~
+  </script>
+</body>
+</html>
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Custom Rules" icon="code" href="/guides/custom-rules">
+    Learn how to create your own conversion rules
+  </Card>
+  <Card title="Options Reference" icon="sliders" href="/concepts/conversion-options">
+    Explore all available configuration options
+  </Card>
+</CardGroup>

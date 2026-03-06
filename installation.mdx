@@ -1,0 +1,169 @@
+---
+title: Installation
+description: Install Turndown in your Node.js or browser project
+---
+
+# Installation
+
+Turndown can be installed via npm for Node.js projects or loaded directly in the browser via CDN. Choose the installation method that best fits your project.
+
+## Package Managers
+
+Install Turndown using your preferred package manager:
+
+<CodeGroup>
+
+```bash npm
+npm install turndown
+```
+
+```bash yarn
+yarn add turndown
+```
+
+```bash pnpm
+pnpm add turndown
+```
+
+</CodeGroup>
+
+The package includes multiple build formats to support different environments:
+
+- **CommonJS**: `lib/turndown.cjs.js` (main entry point)
+- **ES Module**: `lib/turndown.es.js`
+- **UMD**: `lib/turndown.umd.js` (Node.js) and `lib/turndown.browser.umd.js` (browser)
+- **IIFE**: `dist/turndown.js` (browser global)
+
+## Browser Installation
+
+### CDN (unpkg)
+
+For quick browser usage, load Turndown directly from the unpkg CDN:
+
+```html
+<script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+<script>
+  var turndownService = new TurndownService()
+  var markdown = turndownService.turndown('<h1>Hello world!</h1>')
+  console.log(markdown)
+</script>
+```
+
+The CDN script creates a global `TurndownService` constructor that you can use immediately.
+
+### RequireJS/AMD
+
+If you're using RequireJS or another AMD loader, use the UMD build:
+
+```javascript
+require.config({
+  paths: {
+    'turndown': 'node_modules/turndown/lib/turndown.browser.umd'
+  }
+})
+
+require(['turndown'], function(TurndownService) {
+  var turndownService = new TurndownService()
+  var markdown = turndownService.turndown('<h1>Hello world!</h1>')
+})
+```
+
+## Build from Source
+
+To build Turndown from source:
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/mixmark-io/turndown.git
+    cd turndown
+    ```
+  </Step>
+  
+  <Step title="Install dependencies">
+    ```bash
+    npm install
+    ```
+  </Step>
+  
+  <Step title="Build the project">
+    ```bash
+    npm run build
+    ```
+    
+    This generates all build formats:
+    - CommonJS builds (CJS and browser CJS)
+    - ES module builds (ES and browser ES)
+    - UMD builds (Node.js and browser)
+    - IIFE build for browsers
+  </Step>
+</Steps>
+
+The built files will be available in the `lib/` and `dist/` directories.
+
+## Verify Installation
+
+### Node.js
+
+After installing via npm, verify that Turndown is working:
+
+```javascript
+const TurndownService = require('turndown')
+
+const turndownService = new TurndownService()
+const markdown = turndownService.turndown('<h1>Hello world!</h1>')
+
+console.log(markdown)
+// Output: # Hello world!
+```
+
+If you see the Markdown output, Turndown is installed correctly!
+
+### Browser
+
+In the browser, check that the global `TurndownService` constructor is available:
+
+```html
+<script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+<script>
+  if (typeof TurndownService !== 'undefined') {
+    console.log('Turndown loaded successfully!')
+  } else {
+    console.error('Failed to load Turndown')
+  }
+</script>
+```
+
+## Package Configuration
+
+The package.json specifies browser-specific builds that exclude Node.js dependencies:
+
+```json
+{
+  "browser": {
+    "@mixmark-io/domino": false,
+    "./lib/turndown.cjs.js": "./lib/turndown.browser.cjs.js",
+    "./lib/turndown.es.js": "./lib/turndown.browser.es.js",
+    "./lib/turndown.umd.js": "./lib/turndown.browser.umd.js"
+  }
+}
+```
+
+This ensures that when bundling for the browser, the `@mixmark-io/domino` dependency (used for server-side HTML parsing) is excluded and the appropriate browser builds are used instead.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Follow a step-by-step tutorial to start converting HTML to Markdown
+  </Card>
+  <Card title="Node.js Usage" icon="node" href="/guides/node-usage">
+    Learn how to use Turndown in Node.js applications
+  </Card>
+  <Card title="Browser Usage" icon="browser" href="/guides/browser-usage">
+    Explore browser-specific usage patterns
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/constructor">
+    Explore the complete API documentation
+  </Card>
+</CardGroup>

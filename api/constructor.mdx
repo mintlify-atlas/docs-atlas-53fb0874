@@ -1,0 +1,117 @@
+---
+title: "TurndownService Constructor"
+description: "Create a new TurndownService instance to convert HTML to Markdown"
+---
+
+## Syntax
+
+```javascript
+var turndownService = new TurndownService([options])
+// or
+var turndownService = TurndownService([options])
+```
+
+## Description
+
+Creates a new instance of TurndownService with optional configuration. The constructor can be called with or without the `new` keyword.
+
+## Parameters
+
+<ParamField path="options" type="object" optional>
+  Configuration object to customize the conversion behavior
+  
+  <Expandable title="properties">
+    <ParamField path="headingStyle" type="string" default="setext">
+      Style for headings: `setext` or `atx`
+    </ParamField>
+    
+    <ParamField path="hr" type="string" default="* * *">
+      Markdown representation for horizontal rules
+    </ParamField>
+    
+    <ParamField path="bulletListMarker" type="string" default="*">
+      Character for bullet list items: `*`, `-`, or `+`
+    </ParamField>
+    
+    <ParamField path="codeBlockStyle" type="string" default="indented">
+      Style for code blocks: `indented` or `fenced`
+    </ParamField>
+    
+    <ParamField path="fence" type="string" default="```">
+      Fence characters for code blocks: ` ``` ` or `~~~`
+    </ParamField>
+    
+    <ParamField path="emDelimiter" type="string" default="_">
+      Delimiter for emphasis: `_` or `*`
+    </ParamField>
+    
+    <ParamField path="strongDelimiter" type="string" default="**">
+      Delimiter for strong emphasis: `**` or `__`
+    </ParamField>
+    
+    <ParamField path="linkStyle" type="string" default="inlined">
+      Style for links: `inlined` or `referenced`
+    </ParamField>
+    
+    <ParamField path="linkReferenceStyle" type="string" default="full">
+      Style for link references: `full`, `collapsed`, or `shortcut`
+    </ParamField>
+    
+    <ParamField path="br" type="string" default="  ">
+      Markdown representation for line breaks
+    </ParamField>
+    
+    <ParamField path="preformattedCode" type="boolean" default="false">
+      Whether to preserve whitespace in code blocks
+    </ParamField>
+    
+    <ParamField path="blankReplacement" type="function">
+      Custom replacement function for blank elements
+    </ParamField>
+    
+    <ParamField path="keepReplacement" type="function">
+      Custom replacement function for kept elements
+    </ParamField>
+    
+    <ParamField path="defaultReplacement" type="function">
+      Custom replacement function for unrecognized elements
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Returns
+
+<ResponseField name="turndownService" type="TurndownService">
+  A new TurndownService instance configured with the provided options
+</ResponseField>
+
+## Examples
+
+### Basic Usage
+
+```javascript
+var TurndownService = require('turndown')
+var turndownService = new TurndownService()
+```
+
+### With Options
+
+```javascript
+var turndownService = new TurndownService({
+  headingStyle: 'atx',
+  codeBlockStyle: 'fenced',
+  bulletListMarker: '-'
+})
+```
+
+### Without `new` Keyword
+
+```javascript
+var turndownService = TurndownService({ emDelimiter: '*' })
+```
+
+## Notes
+
+- The constructor automatically returns a new instance even if called without the `new` keyword
+- All options have sensible defaults based on CommonMark specification
+- Options can be accessed later via `turndownService.options`

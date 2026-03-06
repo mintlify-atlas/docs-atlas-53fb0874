@@ -1,0 +1,110 @@
+---
+title: Introduction
+description: Convert HTML to Markdown with JavaScript
+---
+
+# Welcome to Turndown
+
+Turndown is a JavaScript library that converts HTML to Markdown. It's designed to be fast, flexible, and extensible, supporting both browser and Node.js environments.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get up and running with Turndown in minutes
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/constructor">
+    Explore the complete API documentation
+  </Card>
+  <Card title="Custom Rules" icon="wrench" href="/guides/custom-rules">
+    Learn how to extend Turndown with custom rules
+  </Card>
+  <Card title="Plugins" icon="plug" href="/concepts/plugins">
+    Add functionality with the plugin system
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="CommonMark Support" icon="check">
+    Full support for the CommonMark specification
+  </Card>
+  <Card title="Highly Configurable" icon="sliders">
+    Control heading styles, code blocks, delimiters, and more
+  </Card>
+  <Card title="Extensible Rules" icon="puzzle-piece">
+    Add custom rules to handle any HTML element
+  </Card>
+  <Card title="Plugin System" icon="plug">
+    Extend functionality with reusable plugins
+  </Card>
+  <Card title="Cross-Platform" icon="globe">
+    Works in both browser and Node.js environments
+  </Card>
+  <Card title="Lightweight" icon="feather">
+    Minimal dependencies, maximum performance
+  </Card>
+</CardGroup>
+
+## Quick Example
+
+Here's a simple example of converting HTML to Markdown:
+
+```javascript
+var TurndownService = require('turndown')
+
+var turndownService = new TurndownService()
+var markdown = turndownService.turndown('<h1>Hello world!</h1>')
+
+console.log(markdown) // # Hello world!
+```
+
+## Use Cases
+
+Turndown is perfect for:
+
+- **Content Migration**: Convert existing HTML content to Markdown
+- **Web Scraping**: Extract clean Markdown from web pages
+- **Rich Text Editors**: Convert WYSIWYG editor output to Markdown
+- **Documentation Tools**: Transform HTML documentation to Markdown format
+- **Email Processing**: Convert HTML emails to readable Markdown
+
+## Browser and Node.js Support
+
+Turndown works seamlessly in both environments:
+
+<Tabs>
+  <Tab title="Node.js">
+    ```javascript
+    var TurndownService = require('turndown')
+    var turndownService = new TurndownService()
+    ```
+  </Tab>
+  <Tab title="Browser">
+    ```html
+    <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+    <script>
+      var turndownService = new TurndownService()
+    </script>
+    ```
+  </Tab>
+</Tabs>
+
+## Next Steps
+
+<Steps>
+  <Step title="Install Turndown">
+    Install the package via npm, yarn, or pnpm
+    
+    [Go to Installation](/installation)
+  </Step>
+  <Step title="Try the Quickstart">
+    Learn the basics with a hands-on tutorial
+    
+    [Go to Quickstart](/quickstart)
+  </Step>
+  <Step title="Explore the API">
+    Dive deep into all available methods and options
+    
+    [Go to API Reference](/api/constructor)
+  </Step>
+</Steps>

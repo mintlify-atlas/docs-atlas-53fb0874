@@ -1,0 +1,104 @@
+---
+title: "keep"
+description: "Preserve HTML elements in the Markdown output"
+---
+
+## Syntax
+
+```javascript
+turndownService.keep(filter)
+```
+
+## Description
+
+Determines which HTML elements should be kept as HTML in the Markdown output instead of being converted. By default, Turndown converts all recognized HTML to Markdown. Use this method to preserve specific elements as raw HTML.
+
+## Parameters
+
+<ParamField path="filter" type="string | array | function" required>
+  Specifies which elements to keep as HTML:
+  - **String**: A single tag name (e.g., `'del'`)
+  - **Array**: Multiple tag names (e.g., `['del', 'ins']`)
+  - **Function**: Custom filter function `(node, options) => boolean`
+</ParamField>
+
+## Returns
+
+<ResponseField name="instance" type="TurndownService">
+  Returns the TurndownService instance for method chaining
+</ResponseField>
+
+## Examples
+
+### Keep Single Element
+
+```javascript
+turndownService.keep('del')
+turndownService.turndown('<p>Hello <del>world</del></p>')
+// Result: Hello <del>world</del>
+```
+
+### Keep Multiple Elements
+
+```javascript
+turndownService.keep(['del', 'ins'])
+turndownService.turndown('<p>Hello <del>world</del><ins>World</ins></p>')
+// Result: Hello <del>world</del><ins>World</ins>
+```
+
+### Keep with Custom Filter
+
+```javascript
+turndownService.keep(function (node) {
+  return node.nodeName === 'SPAN' && node.getAttribute('class') === 'keep'
+})
+
+turndownService.turndown('<p>Convert <span>this</span> but not <span class="keep">this</span></p>')
+// Result: Convert this but not <span class="keep">this</span>
+```
+
+### Chaining Keep Calls
+
+```javascript
+turndownService
+  .keep('sub')
+  .keep('sup')
+  .turndown('<p>H<sub>2</sub>O and E=mc<sup>2</sup></p>')
+// Result: H<sub>2</sub>O and E=mc<sup>2</sup>
+```
+
+## Behavior Details
+
+### Block-Level Elements
+
+Block-level elements that are kept will be separated from surrounding content by blank lines:
+
+```javascript
+turndownService.keep('div')
+turndownService.turndown('<p>Before</p><div>Middle</div><p>After</p>')
+// Result:
+// Before
+//
+// <div>Middle</div>
+//
+// After
+```
+
+### Inline Elements
+
+Inline elements are kept without additional spacing:
+
+```javascript
+turndownService.keep('mark')
+turndownService.turndown('<p>This is <mark>highlighted</mark> text</p>')
+// Result: This is <mark>highlighted</mark> text
+```
+
+## Notes
+
+- Returns the instance to enable method chaining
+- Can be called multiple times; newer filters take precedence
+- Keep filters are overridden by standard CommonMark rules and added rules
+- To keep elements handled by default rules, add a custom rule instead
+- The default `keepReplacement` function can be customized via constructor options
+- Block-level kept elements are wrapped with blank lines; inline elements are not

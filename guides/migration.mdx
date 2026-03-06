@@ -1,0 +1,332 @@
+---
+title: Migration Guide
+description: Migrate from to-markdown to Turndown and learn about breaking changes
+---
+
+## Overview
+
+Turndown is the successor to the **to-markdown** library. The project was renamed to better reflect its purpose and to provide a fresh start for ongoing development.
+
+<Note>
+The `to-markdown` package has been deprecated in favor of Turndown. All new projects should use Turndown, and existing projects are encouraged to migrate.
+</Note>
+
+## Why Migrate?
+
+Turndown offers several improvements over to-markdown:
+
+- **Active maintenance** - Regular updates and bug fixes
+- **Better API** - More intuitive method names and options
+- **Plugin system** - Extensible architecture for adding features
+- **Improved performance** - Optimized HTML parsing and conversion
+- **Better documentation** - Comprehensive guides and examples
+- **TypeScript support** - Type definitions for better IDE support
+
+## Quick Migration Steps
+
+<Steps>
+  <Step title="Update package dependency">
+    Replace `to-markdown` with `turndown` in your `package.json`:
+    
+    ```bash
+    npm uninstall to-markdown
+    npm install turndown
+    ```
+  </Step>
+  
+  <Step title="Update require/import statements">
+    Change your module imports:
+    
+    ```javascript
+    // Before (to-markdown)
+    var toMarkdown = require('to-markdown')
+    
+    // After (Turndown)
+    var TurndownService = require('turndown')
+    ```
+  </Step>
+  
+  <Step title="Update instantiation">
+    Create a Turndown service instance:
+    
+    ```javascript
+    // Before (to-markdown)
+    var markdown = toMarkdown('<h1>Hello</h1>')
+    
+    // After (Turndown)
+    var turndownService = new TurndownService()
+    var markdown = turndownService.turndown('<h1>Hello</h1>')
+    ```
+  </Step>
+  
+  <Step title="Update method calls">
+    Review and update any custom rules or method calls based on the breaking changes below.
+  </Step>
+</Steps>
+
+## Breaking Changes
+
+### 1. Constructor Required
+
+**to-markdown** was a function that could be called directly. **Turndown** requires instantiation:
+
+<CodeGroup>
+```javascript to-markdown
+var toMarkdown = require('to-markdown')
+var markdown = toMarkdown('<p>Hello world</p>')
+```
+
+```javascript Turndown
+var TurndownService = require('turndown')
+var turndownService = new TurndownService()
+var markdown = turndownService.turndown('<p>Hello world</p>')
+```
+</CodeGroup>
+
+### 2. Method Naming
+
+Several methods have been renamed for consistency:
+
+| to-markdown | Turndown | Description |
+|-------------|----------|-------------|
+| N/A (direct call) | `turndown()` | Convert HTML to Markdown |
+| `toMarkdown.addRule()` | `addRule()` | Add a custom rule |
+| `toMarkdown.keep()` | `keep()` | Keep elements as HTML |
+| `toMarkdown.remove()` | `remove()` | Remove elements |
+| N/A | `use()` | Apply plugins |
+
+### 3. Options Changes
+
+Some option names have changed:
+
+<CodeGroup>
+```javascript to-markdown
+var markdown = toMarkdown(html, {
+  gfm: true,
+  converters: [/* custom converters */]
+})
+```
+
+```javascript Turndown
+var turndownService = new TurndownService({
+  headingStyle: 'atx',
+  codeBlockStyle: 'fenced'
+})
+
+// GFM now requires a separate plugin
+var gfm = require('turndown-plugin-gfm').gfm
+turndownService.use(gfm)
+
+// Custom converters are now called rules
+turndownService.addRule('myRule', {/* rule config */})
+```
+</CodeGroup>
+
+### 4. GitHub Flavored Markdown (GFM)
+
+GFM support is no longer built-in. It's now available as a separate plugin:
+
+<CodeGroup>
+```javascript to-markdown
+var markdown = toMarkdown(html, {
+  gfm: true
+})
+```
+
+```javascript Turndown
+var TurndownService = require('turndown')
+var gfm = require('turndown-plugin-gfm').gfm
+
+var turndownService = new TurndownService()
+turndownService.use(gfm)
+
+var markdown = turndownService.turndown(html)
+```
+</CodeGroup>
+
+### 5. Custom Rules API
+
+The API for custom rules has been simplified:
+
+<CodeGroup>
+```javascript to-markdown
+toMarkdown.addRule('strikethrough', {
+  filter: ['del', 's'],
+  replacement: function (content, node) {
+    return '~~' + content + '~~'
+  }
+})
+```
+
+```javascript Turndown
+turndownService.addRule('strikethrough', {
+  filter: ['del', 's', 'strike'],
+  replacement: function (content) {
+    return '~' + content + '~'
+  }
+})
+```
+</CodeGroup>
+
+### 6. Filter Function Signature
+
+Filter functions now receive the options object:
+
+<CodeGroup>
+```javascript to-markdown
+filter: function (node) {
+  return node.nodeName === 'A'
+}
+```
+
+```javascript Turndown
+filter: function (node, options) {
+  return (
+    options.linkStyle === 'inlined' &&
+    node.nodeName === 'A' &&
+    node.getAttribute('href')
+  )
+}
+```
+</CodeGroup>
+
+## Complete Migration Example
+
+Here's a complete before/after example:
+
+<CodeGroup>
+```javascript to-markdown (Before)
+var toMarkdown = require('to-markdown')
+
+// Add custom rule
+toMarkdown.addRule('highlight', {
+  filter: 'mark',
+  replacement: function (content) {
+    return '==' + content + '=='
+  }
+})
+
+// Convert with options
+var markdown = toMarkdown('<p>Hello <mark>world</mark></p>', {
+  gfm: true,
+  headingStyle: 'atx'
+})
+
+console.log(markdown)
+```
+
+```javascript Turndown (After)
+var TurndownService = require('turndown')
+var gfm = require('turndown-plugin-gfm').gfm
+
+// Create service with options
+var turndownService = new TurndownService({
+  headingStyle: 'atx'
+})
+
+// Apply GFM plugin
+turndownService.use(gfm)
+
+// Add custom rule
+turndownService.addRule('highlight', {
+  filter: 'mark',
+  replacement: function (content) {
+    return '==' + content + '=='
+  }
+})
+
+// Convert
+var markdown = turndownService.turndown('<p>Hello <mark>world</mark></p>')
+
+console.log(markdown)
+```
+</CodeGroup>
+
+## Official Migration Guide
+
+For detailed migration information, including edge cases and advanced scenarios, refer to the official migration guide:
+
+<Card
+  title="Official Migration Guide"
+  icon="github"
+  href="https://github.com/domchristie/to-markdown/wiki/Migrating-from-to-markdown-to-Turndown"
+>
+  Comprehensive guide on the GitHub wiki with detailed examples and troubleshooting
+</Card>
+
+## Common Migration Issues
+
+### Issue: "TurndownService is not a constructor"
+
+**Solution:** Make sure you're instantiating Turndown with `new`:
+
+```javascript
+// Wrong
+var turndownService = TurndownService()
+
+// Correct
+var turndownService = new TurndownService()
+```
+
+### Issue: GFM Features Not Working
+
+**Solution:** Install and use the GFM plugin:
+
+```bash
+npm install turndown-plugin-gfm
+```
+
+```javascript
+var gfm = require('turndown-plugin-gfm').gfm
+turndownService.use(gfm)
+```
+
+### Issue: Custom Rules Not Applied
+
+**Solution:** Ensure you're calling `addRule()` on the service instance:
+
+```javascript
+// Wrong
+TurndownService.addRule('myRule', {/* ... */})
+
+// Correct
+turndownService.addRule('myRule', {/* ... */})
+```
+
+## Repository Changes
+
+The Turndown repository has moved:
+
+- **Old URL:** `https://github.com/domchristie/to-markdown`
+- **New URL:** `https://github.com/mixmark-io/turndown`
+
+Update any references in your documentation, CI/CD pipelines, or dependency management systems.
+
+## Backward Compatibility
+
+Turndown does **not** provide backward compatibility with to-markdown. You must update your code to use the new API. However, the core functionality remains the same, and most migrations can be completed quickly.
+
+## Need Help?
+
+If you encounter issues during migration:
+
+1. Check the [GitHub Issues](https://github.com/mixmark-io/turndown/issues) for similar problems
+2. Review the [official migration guide](https://github.com/domchristie/to-markdown/wiki/Migrating-from-to-markdown-to-Turndown)
+3. Open a new issue with details about your migration challenge
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Getting Started" icon="rocket" href="/quickstart">
+    Learn the basics of using Turndown
+  </Card>
+  <Card title="Custom Rules" icon="code" href="/guides/custom-rules">
+    Extend Turndown with custom conversion rules
+  </Card>
+  <Card title="GFM Plugin" icon="puzzle-piece" href="/guides/gfm-plugin">
+    Add GitHub Flavored Markdown support
+  </Card>
+  <Card title="API Reference" icon="book" href="/api/constructor">
+    Explore the complete API documentation
+  </Card>
+</CardGroup>

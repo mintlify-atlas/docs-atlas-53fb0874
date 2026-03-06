@@ -1,0 +1,432 @@
+---
+title: Replacements
+description: Convert matched HTML elements to Markdown with replacement functions
+---
+
+## Overview
+
+The `replacement` property is a function that defines how a matched HTML element should be converted to Markdown. It receives information about the element and returns the Markdown string.
+
+## Function Signature
+
+```javascript
+replacement: function (content, node, options) {
+  // Return Markdown string
+}
+```
+
+<ParamField name="content" type="string">
+  The Markdown content of the element's children (already converted)
+</ParamField>
+
+<ParamField name="node" type="Node">
+  The DOM node being converted
+</ParamField>
+
+<ParamField name="options" type="object">
+  The TurndownService options object
+</ParamField>
+
+**Returns:** `string` - The Markdown representation of the element
+
+## Simple Replacements
+
+### Paragraph
+
+Wraps content with blank lines:
+
+```javascript
+replacement: function (content) {
+  return '\n\n' + content + '\n\n'
+}
+```
+
+**Input:** `<p>Hello world</p>`
+**Output:**
+```markdown
+
+
+Hello world
+
+
+```
+
+### Blockquote
+
+Prefixes each line with `>`:
+
+```javascript
+replacement: function (content) {
+  content = content.trim().replace(/^/gm, '> ')
+  return '\n\n' + content + '\n\n'
+}
+```
+
+**Input:** `<blockquote>Hello\nWorld</blockquote>`
+**Output:**
+```markdown
+
+
+> Hello
+> World
+
+
+```
+
+### Horizontal Rule
+
+Outputs the configured horizontal rule:
+
+```javascript
+replacement: function (content, node, options) {
+  return '\n\n' + options.hr + '\n\n'
+}
+```
+
+Uses the `hr` option (default: `'* * *'`).
+
+## Replacements Using Options
+
+### Line Break
+
+Uses the configured line break style:
+
+```javascript
+replacement: function (content, node, options) {
+  return options.br + '\n'
+}
+```
+
+The `br` option determines the line break format (default: `'  '` - two spaces).
+
+### Emphasis
+
+Wraps content with the configured emphasis delimiter:
+
+```javascript
+replacement: function (content, node, options) {
+  if (!content.trim()) return ''
+  return options.emDelimiter + content + options.emDelimiter
+}
+```
+
+Uses the `emDelimiter` option (default: `'_'`). Returns empty string if content is blank.
+
+**Input:** `<em>italic</em>`
+**Output:** `_italic_`
+
+### Strong
+
+Wraps content with the configured strong delimiter:
+
+```javascript
+replacement: function (content, node, options) {
+  if (!content.trim()) return ''
+  return options.strongDelimiter + content + options.strongDelimiter
+}
+```
+
+Uses the `strongDelimiter` option (default: `'**'`).
+
+**Input:** `<strong>bold</strong>`
+**Output:** `**bold**`
+
+## Replacements Using Node Properties
+
+### Heading
+
+Extracts heading level from the node name:
+
+```javascript
+replacement: function (content, node, options) {
+  var hLevel = Number(node.nodeName.charAt(1))
+
+  if (options.headingStyle === 'setext' && hLevel < 3) {
+    var underline = repeat((hLevel === 1 ? '=' : '-'), content.length)
+    return '\n\n' + content + '\n' + underline + '\n\n'
+  } else {
+    return '\n\n' + repeat('#', hLevel) + ' ' + content + '\n\n'
+  }
+}
+```
+
+**ATX style (`h2`):**
+```markdown
+
+
+## Heading
+
+
+```
+
+**Setext style (`h1`):**
+```markdown
+
+
+Heading
+=======
+
+
+```
+
+### List Item
+
+Checks parent element and position:
+
+```javascript
+replacement: function (content, node, options) {
+  var prefix = options.bulletListMarker + '   '
+  var parent = node.parentNode
+  
+  if (parent.nodeName === 'OL') {
+    var start = parent.getAttribute('start')
+    var index = Array.prototype.indexOf.call(parent.children, node)
+    prefix = (start ? Number(start) + index : index + 1) + '.  '
+  }
+  
+  content = content.trim() + (content.endsWith('\n') ? '\n' : '')
+  content = content.replace(/\n/gm, '\n' + ' '.repeat(prefix.length))
+  
+  return prefix + content + (node.nextSibling ? '\n' : '')
+}
+```
+
+This replacement:
+1. Determines if the list is ordered or unordered
+2. Calculates the appropriate prefix (bullet or number)
+3. Indents multiline content
+4. Adds newlines between items
+
+### Image
+
+Extracts attributes from the node:
+
+```javascript
+replacement: function (content, node) {
+  var alt = node.getAttribute('alt') || ''
+  var src = node.getAttribute('src') || ''
+  var title = node.getAttribute('title') || ''
+  var titlePart = title ? ' "' + title + '"' : ''
+  return src ? '![' + alt + ']' + '(' + src + titlePart + ')' : ''
+}
+```
+
+**Input:** `<img src="logo.png" alt="Logo" title="Company Logo">`
+**Output:** `![Logo](logo.png "Company Logo")`
+
+### Inline Link
+
+Extracts and escapes link attributes:
+
+```javascript
+replacement: function (content, node) {
+  var href = node.getAttribute('href')
+  if (href) href = href.replace(/([()])/g, '\\$1')
+  
+  var title = node.getAttribute('title') || ''
+  if (title) title = ' "' + title.replace(/"/g, '\\"') + '"'
+  
+  return '[' + content + '](' + href + title + ')'
+}
+```
+
+**Input:** `<a href="https://example.com" title="Example">Link</a>`
+**Output:** `[Link](https://example.com "Example")`
+
+## Complex Replacements
+
+### List
+
+Contextual formatting based on parent:
+
+```javascript
+replacement: function (content, node) {
+  var parent = node.parentNode
+  if (parent.nodeName === 'LI' && parent.lastElementChild === node) {
+    return '\n' + content
+  } else {
+    return '\n\n' + content + '\n\n'
+  }
+}
+```
+
+Nested lists within list items are formatted differently than top-level lists.
+
+### Inline Code
+
+Dynamically determines delimiter:
+
+```javascript
+replacement: function (content) {
+  if (!content) return ''
+  content = content.replace(/\r?\n|\r/g, ' ')
+
+  var extraSpace = /^`|^ .*?[^ ].* $|`$/.test(content) ? ' ' : ''
+  var delimiter = '`'
+  var matches = content.match(/`+/gm) || []
+  
+  while (matches.indexOf(delimiter) !== -1) {
+    delimiter = delimiter + '`'
+  }
+
+  return delimiter + extraSpace + content + extraSpace + delimiter
+}
+```
+
+This replacement:
+1. Replaces newlines with spaces
+2. Determines if extra spaces are needed
+3. Finds a delimiter that doesn't conflict with backticks in the content
+4. Wraps the content appropriately
+
+**Input:** `` <code>`code`</code> ``
+**Output:** ``` `` `code` `` ```
+
+### Fenced Code Block
+
+Extracts language and adapts fence size:
+
+```javascript
+replacement: function (content, node, options) {
+  var className = node.firstChild.getAttribute('class') || ''
+  var language = (className.match(/language-(\S+)/) || [null, ''])[1]
+  var code = node.firstChild.textContent
+
+  var fenceChar = options.fence.charAt(0)
+  var fenceSize = 3
+  var fenceInCodeRegex = new RegExp('^' + fenceChar + '{3,}', 'gm')
+
+  var match
+  while ((match = fenceInCodeRegex.exec(code))) {
+    if (match[0].length >= fenceSize) {
+      fenceSize = match[0].length + 1
+    }
+  }
+
+  var fence = repeat(fenceChar, fenceSize)
+
+  return (
+    '\n\n' + fence + language + '\n' +
+    code.replace(/\n$/, '') +
+    '\n' + fence + '\n\n'
+  )
+}
+```
+
+This replacement:
+1. Extracts the language from the class name
+2. Gets the raw code text
+3. Determines the minimum fence size to avoid conflicts
+4. Builds the fenced code block
+
+**Input:**
+```html
+<pre><code class="language-js">console.log('hello')</code></pre>
+```
+
+**Output:**
+````markdown
+
+
+```js
+console.log('hello')
+```
+
+
+````
+
+### Reference Link
+
+Collects references for later output:
+
+```javascript
+replacement: function (content, node, options) {
+  var href = node.getAttribute('href')
+  var title = node.getAttribute('title') || ''
+  if (title) title = ' "' + title + '"'
+  
+  var replacement
+  var reference
+
+  switch (options.linkReferenceStyle) {
+    case 'collapsed':
+      replacement = '[' + content + '][]'
+      reference = '[' + content + ']: ' + href + title
+      break
+    case 'shortcut':
+      replacement = '[' + content + ']'
+      reference = '[' + content + ']: ' + href + title
+      break
+    default:
+      var id = this.references.length + 1
+      replacement = '[' + content + '][' + id + ']'
+      reference = '[' + id + ']: ' + href + title
+  }
+
+  this.references.push(reference)
+  return replacement
+}
+```
+
+This replacement uses the rule's `references` array to collect link definitions, which are output at the end via the `append` function.
+
+**Input:** `<a href="https://example.com">Link</a>`
+**Output (in content):** `[Link][1]`
+**Output (appended):**
+```markdown
+[1]: https://example.com
+```
+
+## Indented Code Block
+
+Directly accesses text content:
+
+```javascript
+replacement: function (content, node, options) {
+  return (
+    '\n\n    ' +
+    node.firstChild.textContent.replace(/\n/g, '\n    ') +
+    '\n\n'
+  )
+}
+```
+
+Note: Uses `node.firstChild.textContent` instead of `content` to get the raw code without markdown conversion.
+
+## Best Practices
+
+### Return Empty String for Empty Content
+
+```javascript
+replacement: function (content) {
+  if (!content.trim()) return ''
+  // ... process content
+}
+```
+
+### Use Consistent Spacing
+
+Block-level elements typically use `\n\n` before and after:
+
+```javascript
+return '\n\n' + content + '\n\n'
+```
+
+### Escape Special Characters
+
+When outputting user content, escape characters that have special meaning:
+
+```javascript
+var href = node.getAttribute('href')
+if (href) href = href.replace(/([()])/g, '\\$1')
+```
+
+### Access Raw Text When Needed
+
+For code blocks, use `textContent` instead of the converted `content`:
+
+```javascript
+var code = node.firstChild.textContent
+```
+
+This preserves HTML entities and special characters without markdown conversion.

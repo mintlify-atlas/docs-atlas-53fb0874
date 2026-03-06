@@ -1,0 +1,263 @@
+---
+title: Filters
+description: Define which HTML elements a rule should match and convert
+---
+
+## Overview
+
+The `filter` property of a rule determines which HTML elements the rule applies to. Filters can be strings, arrays, or functions, providing flexibility for simple and complex matching logic.
+
+## Filter Types
+
+### String Filter
+
+Matches a single HTML element by tag name (case-insensitive).
+
+**Example - Paragraph:**
+```javascript
+filter: 'p'
+```
+
+Matches all `<p>` elements.
+
+**Example - Blockquote:**
+```javascript
+filter: 'blockquote'
+```
+
+Matches all `<blockquote>` elements.
+
+**Example - Line Break:**
+```javascript
+filter: 'br'
+```
+
+Matches all `<br>` elements.
+
+### Array Filter
+
+Matches multiple HTML elements by tag names.
+
+**Example - Emphasis:**
+```javascript
+filter: ['em', 'i']
+```
+
+Matches both `<em>` and `<i>` elements.
+
+**Example - Strong:**
+```javascript
+filter: ['strong', 'b']
+```
+
+Matches both `<strong>` and `<b>` elements.
+
+**Example - Headings:**
+```javascript
+filter: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']
+```
+
+Matches all heading elements from `<h1>` through `<h6>`.
+
+**Example - Lists:**
+```javascript
+filter: ['ul', 'ol']
+```
+
+Matches both unordered (`<ul>`) and ordered (`<ol>`) lists.
+
+## Function Filter
+
+A function that receives a DOM node and options object, and returns `true` if the rule should apply to that node.
+
+<ParamField name="node" type="Node">
+  The DOM node being evaluated
+</ParamField>
+
+<ParamField name="options" type="object">
+  The TurndownService options object
+</ParamField>
+
+**Returns:** `boolean` - `true` if the rule should apply to this node
+
+### Example: Inline Code
+
+Matches `<code>` elements that are NOT inside `<pre>` blocks:
+
+```javascript
+filter: function (node) {
+  var hasSiblings = node.previousSibling || node.nextSibling
+  var isCodeBlock = node.parentNode.nodeName === 'PRE' && !hasSiblings
+
+  return node.nodeName === 'CODE' && !isCodeBlock
+}
+```
+
+This filter:
+1. Checks if the node is a `<code>` element
+2. Determines if it's inside a `<pre>` block without siblings (which would be a code block)
+3. Returns `true` only for inline code, not code blocks
+
+### Example: Indented Code Block
+
+Matches code blocks when the `codeBlockStyle` option is set to `'indented'`:
+
+```javascript
+filter: function (node, options) {
+  return (
+    options.codeBlockStyle === 'indented' &&
+    node.nodeName === 'PRE' &&
+    node.firstChild &&
+    node.firstChild.nodeName === 'CODE'
+  )
+}
+```
+
+This filter:
+1. Checks the `codeBlockStyle` option
+2. Verifies the node is a `<pre>` element
+3. Confirms it contains a `<code>` child element
+
+### Example: Fenced Code Block
+
+Matches code blocks when the `codeBlockStyle` option is set to `'fenced'`:
+
+```javascript
+filter: function (node, options) {
+  return (
+    options.codeBlockStyle === 'fenced' &&
+    node.nodeName === 'PRE' &&
+    node.firstChild &&
+    node.firstChild.nodeName === 'CODE'
+  )
+}
+```
+
+Similar to the indented code block filter, but for fenced code blocks.
+
+### Example: Inline Links
+
+Matches links when the `linkStyle` option is set to `'inlined'`:
+
+```javascript
+filter: function (node, options) {
+  return (
+    options.linkStyle === 'inlined' &&
+    node.nodeName === 'A' &&
+    node.getAttribute('href')
+  )
+}
+```
+
+This filter:
+1. Checks if inline link style is enabled
+2. Verifies the node is an `<a>` element
+3. Ensures the link has an `href` attribute
+
+### Example: Reference Links
+
+Matches links when the `linkStyle` option is set to `'referenced'`:
+
+```javascript
+filter: function (node, options) {
+  return (
+    options.linkStyle === 'referenced' &&
+    node.nodeName === 'A' &&
+    node.getAttribute('href')
+  )
+}
+```
+
+Similar to inline links, but for reference-style links.
+
+## Filter Behavior
+
+### Case Sensitivity
+
+Tag names in string and array filters are **case-insensitive**. The filter automatically converts them to lowercase for comparison:
+
+```javascript
+// These are equivalent:
+filter: 'p'
+filter: 'P'
+filter: 'P' // Will match <p>, <P>, etc.
+```
+
+### Node Names
+
+When checking `node.nodeName` in function filters, it returns the tag name in **uppercase**. Always compare using uppercase or convert to lowercase:
+
+```javascript
+// Correct:
+node.nodeName === 'CODE'
+node.nodeName.toLowerCase() === 'code'
+
+// Incorrect:
+node.nodeName === 'code' // Will never match
+```
+
+### Filter Evaluation Order
+
+Filters are evaluated in the order of [rule precedence](/api/rule-structure#rule-precedence). The first matching filter's replacement function is used.
+
+## Common Patterns
+
+### Checking Parent Elements
+
+```javascript
+filter: function (node) {
+  var parent = node.parentNode
+  return node.nodeName === 'LI' && parent.nodeName === 'OL'
+}
+```
+
+### Checking Attributes
+
+```javascript
+filter: function (node) {
+  return (
+    node.nodeName === 'A' &&
+    node.getAttribute('href')
+  )
+}
+```
+
+### Checking Child Elements
+
+```javascript
+filter: function (node) {
+  return (
+    node.nodeName === 'PRE' &&
+    node.firstChild &&
+    node.firstChild.nodeName === 'CODE'
+  )
+}
+```
+
+### Combining with Options
+
+```javascript
+filter: function (node, options) {
+  return (
+    options.headingStyle === 'setext' &&
+    node.nodeName === 'H1'
+  )
+}
+```
+
+## Usage with keep() and remove()
+
+The `keep()` and `remove()` methods also accept filters:
+
+```javascript
+// Keep del and ins elements as HTML
+turndownService.keep(['del', 'ins'])
+
+// Remove del elements entirely
+turndownService.remove('del')
+
+// Function filter with keep
+turndownService.keep(function (node) {
+  return node.nodeName === 'SPAN' && node.className === 'preserve'
+})
+```

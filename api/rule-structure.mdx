@@ -1,0 +1,199 @@
+---
+title: Rule Structure
+description: Understanding the structure and components of Turndown rules
+---
+
+## Overview
+
+A rule is a plain JavaScript object that defines how a specific HTML element should be converted to Markdown. Each rule consists of required and optional properties that control the conversion behavior.
+
+## Required Properties
+
+Every rule must have two core properties:
+
+### filter
+
+Determines which HTML elements this rule applies to. Can be a string, array, or function.
+
+See [Filters](/api/filters) for detailed documentation.
+
+### replacement
+
+A function that converts the matched HTML element to Markdown.
+
+See [Replacements](/api/replacements) for detailed documentation.
+
+## Optional Properties
+
+### append
+
+An optional function that outputs content after all nodes have been processed. This is useful for rules that need to collect information during processing and output it at the end.
+
+<ParamField name="options" type="object">
+  The TurndownService options object
+</ParamField>
+
+**Returns:** `string` - Content to append to the end of the Markdown output
+
+**Example from referenceLink rule:**
+
+```javascript
+append: function (options) {
+  var references = ''
+  if (this.references.length) {
+    references = '\n\n' + this.references.join('\n') + '\n\n'
+    this.references = [] // Reset references
+  }
+  return references
+}
+```
+
+### references
+
+An optional array property used to store reference-style links collected during conversion. Used in conjunction with the `append` function.
+
+**Example from referenceLink rule:**
+
+```javascript
+{
+  filter: function (node, options) {
+    return (
+      options.linkStyle === 'referenced' &&
+      node.nodeName === 'A' &&
+      node.getAttribute('href')
+    )
+  },
+
+  replacement: function (content, node, options) {
+    var href = node.getAttribute('href')
+    var title = node.getAttribute('title')
+    if (title) title = ' "' + title + '"'
+    var id = this.references.length + 1
+    var replacement = '[' + content + '][' + id + ']'
+    var reference = '[' + id + ']: ' + href + title
+    
+    this.references.push(reference)
+    return replacement
+  },
+
+  references: [],
+
+  append: function (options) {
+    var references = ''
+    if (this.references.length) {
+      references = '\n\n' + this.references.join('\n') + '\n\n'
+      this.references = []
+    }
+    return references
+  }
+}
+```
+
+## Complete Rule Examples
+
+### Simple Rule: Paragraph
+
+The simplest form of a rule with string filter:
+
+```javascript
+{
+  filter: 'p',
+  replacement: function (content) {
+    return '\n\n' + content + '\n\n'
+  }
+}
+```
+
+### Array Filter: Heading
+
+A rule that matches multiple element types:
+
+```javascript
+{
+  filter: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+  
+  replacement: function (content, node, options) {
+    var hLevel = Number(node.nodeName.charAt(1))
+    
+    if (options.headingStyle === 'setext' && hLevel < 3) {
+      var underline = repeat((hLevel === 1 ? '=' : '-'), content.length)
+      return '\n\n' + content + '\n' + underline + '\n\n'
+    } else {
+      return '\n\n' + repeat('#', hLevel) + ' ' + content + '\n\n'
+    }
+  }
+}
+```
+
+### Function Filter: Fenced Code Block
+
+A rule with conditional logic based on options:
+
+```javascript
+{
+  filter: function (node, options) {
+    return (
+      options.codeBlockStyle === 'fenced' &&
+      node.nodeName === 'PRE' &&
+      node.firstChild &&
+      node.firstChild.nodeName === 'CODE'
+    )
+  },
+
+  replacement: function (content, node, options) {
+    var className = node.firstChild.getAttribute('class') || ''
+    var language = (className.match(/language-(\S+)/) || [null, ''])[1]
+    var code = node.firstChild.textContent
+
+    var fenceChar = options.fence.charAt(0)
+    var fenceSize = 3
+    var fenceInCodeRegex = new RegExp('^' + fenceChar + '{3,}', 'gm')
+
+    var match
+    while ((match = fenceInCodeRegex.exec(code))) {
+      if (match[0].length >= fenceSize) {
+        fenceSize = match[0].length + 1
+      }
+    }
+
+    var fence = repeat(fenceChar, fenceSize)
+
+    return (
+      '\n\n' + fence + language + '\n' +
+      code.replace(/\n$/, '') +
+      '\n' + fence + '\n\n'
+    )
+  }
+}
+```
+
+## Rule Precedence
+
+When converting HTML, Turndown evaluates rules in the following order and uses the first matching rule:
+
+1. **Blank rule** - Handles elements containing only whitespace (except `<a>`, `<td>`, `<th>`, and void elements)
+2. **Added rules** - Custom rules added via `addRule()`
+3. **CommonMark rules** - Built-in rules for standard Markdown elements
+4. **Keep rules** - Elements to preserve as HTML (via `keep()`)
+5. **Remove rules** - Elements to remove entirely (via `remove()`)
+6. **Default rule** - Fallback for unmatched elements (outputs text content)
+
+This precedence order ensures that:
+- Custom rules can override built-in behavior
+- The blank rule always takes precedence to handle empty elements consistently
+- There's always a fallback (default rule) for unrecognized elements
+
+## Usage with addRule
+
+Rules are added to a TurndownService instance using the `addRule()` method:
+
+```javascript
+turndownService.addRule('strikethrough', {
+  filter: ['del', 's', 'strike'],
+  replacement: function (content) {
+    return '~' + content + '~'
+  }
+})
+```
+
+The first parameter is a unique key for the rule, and the second is the rule object.

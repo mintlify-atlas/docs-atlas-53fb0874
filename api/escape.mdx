@@ -1,0 +1,138 @@
+---
+title: "escape"
+description: "Escape Markdown syntax characters in strings"
+---
+
+## Syntax
+
+```javascript
+turndownService.escape(string)
+```
+
+## Description
+
+Escapes Markdown syntax characters in a string by adding backslashes. This ensures that special characters are not interpreted as Markdown when the output is compiled back to HTML. The method is used internally during conversion but can also be called directly.
+
+## Parameters
+
+<ParamField path="string" type="string" required>
+  The string containing text that may have Markdown syntax characters
+</ParamField>
+
+## Returns
+
+<ResponseField name="escaped" type="string">
+  A string with Markdown syntax characters escaped using backslashes
+</ResponseField>
+
+## Escaped Characters
+
+The following patterns are escaped:
+
+| Pattern | Escaped As | Example |
+|---------|------------|----------|
+| `\` | `\\` | `foo\bar` → `foo\\bar` |
+| `*` | `\*` | `foo*bar` → `foo\*bar` |
+| `^-` (line start) | `\-` | `-foo` → `\-foo` |
+| `^+ ` (line start) | `\+ ` | `+ foo` → `\+ foo` |
+| `^=+` (line start) | `\=` | `===` → `\===` |
+| `^#{1,6} ` (line start) | `\#` | `## foo` → `\## foo` |
+| `` ` `` | `` \` `` | ``foo`bar`` → ``foo\`bar`` |
+| `^~~~` (line start) | `\~~~` | `~~~foo` → `\~~~foo` |
+| `[` | `\[` | `foo[bar]` → `foo\[bar]` |
+| `]` | `\]` | `foo[bar]` → `foo\[bar\]` |
+| `^>` (line start) | `\>` | `>quote` → `\>quote` |
+| `_` | `\_` | `foo_bar` → `foo\_bar` |
+| `^\d+. ` (line start) | `\d+\. ` | `1. item` → `1\. item` |
+
+## Examples
+
+### Basic Escaping
+
+```javascript
+var result = turndownService.escape('Hello *world*')
+// Result: 'Hello \*world\*'
+```
+
+### Escape Multiple Characters
+
+```javascript
+var result = turndownService.escape('Check out [this](link) and `code`')
+// Result: 'Check out \[this\](link) and \`code\`'
+```
+
+### Escape Heading Markers
+
+```javascript
+var result = turndownService.escape('## Not a heading')
+// Result: '\## Not a heading'
+```
+
+### Escape List Markers
+
+```javascript
+var result = turndownService.escape('1. This is not a list')
+// Result: '1\. This is not a list'
+```
+
+### Escape Backslashes
+
+```javascript
+var result = turndownService.escape('Path: C:\\Users\\Documents')
+// Result: 'Path: C:\\\\Users\\\\Documents'
+```
+
+### Using in Custom Rules
+
+```javascript
+turndownService.addRule('customText', {
+  filter: 'span',
+  replacement: function (content, node, options) {
+    // Manually escape content if needed
+    var escaped = turndownService.escape(node.textContent)
+    return escaped
+  }
+})
+```
+
+## Internal Usage
+
+The `escape` method is called automatically during conversion for text nodes (but not for code elements):
+
+```javascript
+// From turndown.js source (simplified)
+if (node.nodeType === 3) {
+  replacement = node.isCode ? node.nodeValue : self.escape(node.nodeValue)
+}
+```
+
+## Customizing Escape Behavior
+
+You can override the escape method to customize escaping behavior:
+
+```javascript
+TurndownService.prototype.escape = function (string) {
+  // Custom escape logic
+  return string.replace(/\*/g, '\\*')
+}
+```
+
+### Example: Less Aggressive Escaping
+
+```javascript
+var turndownService = new TurndownService()
+
+// Override with custom escape that only escapes asterisks
+turndownService.escape = function (string) {
+  return string.replace(/\*/g, '\\*')
+}
+```
+
+## Notes
+
+- Text in code elements is never passed to `escape`
+- The escaping rules are intentionally aggressive to prevent false positives
+- Only line-start patterns (like `^-`, `^>`, `^#{1,6}`) are escaped when at the beginning of a line
+- The method uses an array of regex patterns applied sequentially
+- You can override `TurndownService.prototype.escape` for custom escaping behavior
+- Be careful when customizing: too little escaping may cause parsing issues when converting back to HTML
